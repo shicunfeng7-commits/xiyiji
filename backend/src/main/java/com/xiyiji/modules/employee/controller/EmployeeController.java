@@ -6,6 +6,7 @@ import com.xiyiji.modules.employee.service.EmployeeService;
 import com.xiyiji.modules.order.entity.Order;
 import com.xiyiji.modules.order.service.OrderService;
 import jakarta.annotation.Resource;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -15,25 +16,29 @@ import java.util.List;
 public class EmployeeController {
 
     @Resource
+    private HttpServletRequest request;
+
+    @Resource
     private EmployeeService employeeService;
 
     @Resource
     private OrderService orderService;
 
     /**
-     * 员工登录
+     * 获取当前员工信息（从 token 中解析 userId）
      */
-    @PostMapping("/login")
-    public R<Employee> login(@RequestParam String username, @RequestParam String password) {
-        Employee employee = employeeService.login(username, password);
+    @GetMapping("/info")
+    public R<Employee> getInfo() {
+        Long userId = (Long) request.getAttribute("userId");
+        Employee employee = employeeService.getByUserId(userId);
         if (employee != null) {
             return R.success(employee);
         }
-        return R.error(401, "账号或密码错误");
+        return R.error("该用户不是员工");
     }
 
     /**
-     * 获取可抢订单列表
+     * 获取可抢订单列表（查询 PAID 状态且无 employee_id 的订单）
      */
     @GetMapping("/orders/available")
     public R<List<Order>> getAvailableOrders() {
@@ -41,28 +46,57 @@ public class EmployeeController {
     }
 
     /**
-     * 抢单
+     * 抢单（从 token 获取 userId → 查 employee → 抢单）
      */
     @PostMapping("/order/grab/{orderId}")
-    public R<Void> grabOrder(@PathVariable Long orderId, @RequestParam Long employeeId) {
-        boolean success = orderService.grabOrder(orderId, employeeId);
+    public R<Void> grabOrder(@PathVariable Long orderId) {
+        Long userId = (Long) request.getAttribute("userId");
+        Employee employee = employeeService.getByUserId(userId);
+        if (employee == null) {
+            return R.error("该用户不是员工");
+        }
+        boolean success = orderService.grabOrder(orderId, employee.getId());
         return success ? R.success() : R.error("抢单失败，该订单已被抢走");
     }
 
     /**
-     * 获取员工订单列表
+     * 我的订单（查询 employee_id = 当前员工）
      */
-    @GetMapping("/orders/{employeeId}")
-    public R<List<Order>> getMyOrders(@PathVariable Long employeeId) {
-        return R.success(orderService.getEmployeeOrders(employeeId));
+    @GetMapping("/orders/my-list")
+    public R<List<Order>> getMyOrders() {
+        Long userId = (Long) request.getAttribute("userId");
+        Employee employee = employeeService.getByUserId(userId);
+        if (employee == null) {
+            return R.error("该用户不是员工");
+        }
+        return R.success(orderService.getEmployeeOrders(employee.getId()));
     }
 
     /**
-     * 完成服务
+     * 开始服务（员工只能操作自己的订单）
+     */
+    @PostMapping("/order/start/{orderId}")
+    public R<Void> startOrder(@PathVariable Long orderId) {
+        Long userId = (Long) request.getAttribute("userId");
+        Employee employee = employeeService.getByUserId(userId);
+        if (employee == null) {
+            return R.error("该用户不是员工");
+        }
+        boolean success = orderService.startOrder(orderId, employee.getId());
+        return success ? R.success() : R.error("开始服务失败，订单状态异常");
+    }
+
+    /**
+     * 完成服务（员工只能操作自己的订单）
      */
     @PostMapping("/order/complete/{orderId}")
-    public R<Void> completeOrder(@PathVariable Long orderId, @RequestParam Long employeeId) {
-        boolean success = orderService.completeOrder(orderId, employeeId);
-        return success ? R.success() : R.error("完成失败，订单状态异常");
+    public R<Void> completeOrder(@PathVariable Long orderId) {
+        Long userId = (Long) request.getAttribute("userId");
+        Employee employee = employeeService.getByUserId(userId);
+        if (employee == null) {
+            return R.error("该用户不是员工");
+        }
+        boolean success = orderService.completeOrder(orderId, employee.getId());
+        return success ? R.success() : R.error("完成服务失败，订单状态异常");
     }
 }

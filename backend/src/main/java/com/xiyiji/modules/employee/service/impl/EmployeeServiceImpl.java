@@ -11,10 +11,9 @@ import org.springframework.stereotype.Service;
 public class EmployeeServiceImpl extends ServiceImpl<EmployeeMapper, Employee> implements EmployeeService {
 
     @Override
-    public Employee login(String username, String password) {
+    public Employee getByUserId(Long userId) {
         LambdaQueryWrapper<Employee> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(Employee::getUsername, username)
-               .eq(Employee::getPassword, password);
+        wrapper.eq(Employee::getUserId, userId);
         return getOne(wrapper);
     }
 }

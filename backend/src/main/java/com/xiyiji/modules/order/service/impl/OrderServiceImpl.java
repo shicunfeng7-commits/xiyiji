@@ -58,12 +58,23 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
 
     @Override
     @Transactional
-    public boolean grabOrder(Long orderId, Long employeeId) {
-        // 乐观锁：只有 PAID 状态的才能抢
+    public boolean revertPay(Long orderId) {
         LambdaUpdateWrapper<Order> wrapper = new LambdaUpdateWrapper<>();
         wrapper.eq(Order::getId, orderId)
                .eq(Order::getStatus, OrderStatus.PAID)
-               .set(Order::getStatus, OrderStatus.IN_PROGRESS)
+               .set(Order::getStatus, OrderStatus.UNPAID)
+               .set(Order::getPayTime, null);
+        return update(wrapper);
+    }
+
+    @Override
+    @Transactional
+    public boolean grabOrder(Long orderId, Long employeeId) {
+        // 乐观锁：只有 PAID 状态且无 employee_id 的才能抢
+        LambdaUpdateWrapper<Order> wrapper = new LambdaUpdateWrapper<>();
+        wrapper.eq(Order::getId, orderId)
+               .eq(Order::getStatus, OrderStatus.PAID)
+               .isNull(Order::getEmployeeId)
                .set(Order::getEmployeeId, employeeId);
         boolean updated = update(wrapper);
         if (updated) {
@@ -75,6 +86,17 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
             );
         }
         return updated;
+    }
+
+    @Override
+    @Transactional
+    public boolean startOrder(Long orderId, Long employeeId) {
+        LambdaUpdateWrapper<Order> wrapper = new LambdaUpdateWrapper<>();
+        wrapper.eq(Order::getId, orderId)
+               .eq(Order::getEmployeeId, employeeId)
+               .eq(Order::getStatus, OrderStatus.PAID)
+               .set(Order::getStatus, OrderStatus.IN_PROGRESS);
+        return update(wrapper);
     }
 
     @Override
@@ -101,6 +123,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     public List<Order> getAvailableOrders() {
         LambdaQueryWrapper<Order> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Order::getStatus, OrderStatus.PAID)
+               .isNull(Order::getEmployeeId)
                .orderByAsc(Order::getCreateTime);
         return list(wrapper);
     }
@@ -129,5 +152,24 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         }
         wrapper.orderByDesc(Order::getCreateTime);
         return list(wrapper);
+    }
+
+    @Override
+    public Order getOrderDetail(Long id, Long userId) {
+        LambdaQueryWrapper<Order> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Order::getId, id)
+               .eq(Order::getUserId, userId);
+        return getOne(wrapper);
+    }
+
+    @Override
+    @Transactional
+    public boolean cancelOrder(Long id, Long userId) {
+        LambdaUpdateWrapper<Order> wrapper = new LambdaUpdateWrapper<>();
+        wrapper.eq(Order::getId, id)
+               .eq(Order::getUserId, userId)
+               .eq(Order::getStatus, OrderStatus.UNPAID)
+               .set(Order::getStatus, OrderStatus.CANCELLED);
+        return update(wrapper);
     }
 }
