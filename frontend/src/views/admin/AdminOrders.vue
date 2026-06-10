@@ -25,16 +25,32 @@
         </div>
         <div class="order-footer">
           <span class="order-amount">¥{{ order.amount }}</span>
-          <button
-            v-if="order.status === 'unpaid'"
-            class="action-btn confirm-btn"
-            @click="confirmPay(order)"
-          >
-            确认已支付
-          </button>
-          <span v-else class="status-badge" :class="order.status">
-            {{ order.statusText }}
-          </span>
+          <div class="order-actions">
+            <button
+              v-if="order.status === 'unpaid'"
+              class="action-btn confirm-btn"
+              @click="confirmPay(order)"
+            >
+              确认已支付
+            </button>
+            <button
+              v-if="order.status === 'paid' && !order.employeeId"
+              class="action-btn revert-btn"
+              @click="revertPay(order)"
+            >
+              回退支付
+            </button>
+            <button
+              v-if="order.status === 'paid' && order.employeeId"
+              class="action-btn revert-btn disabled"
+              disabled
+            >
+              回退支付
+            </button>
+            <span v-else-if="order.status !== 'unpaid' && order.status !== 'paid'" class="status-badge" :class="order.status">
+              {{ order.statusText }}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -49,6 +65,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { showDialog, showToast } from 'vant'
+import { post } from '../../utils/request'
 
 const currentTab = ref('all')
 
@@ -61,11 +78,11 @@ const statusTabs = ref([
 ])
 
 const orders = ref([
-  { id: 1, no: 'WP202606150001', user: '张三', building: '食宿楼 · 3栋', room: '301', time: '2026-06-15 10:00 ~ 12:00', amount: '29.90', status: 'unpaid', statusText: '未支付' },
-  { id: 2, no: 'WP202606150002', user: '李四', building: '学生宿舍 · 1栋', room: '506', time: '2026-06-15 14:00 ~ 16:00', amount: '29.90', status: 'unpaid', statusText: '未支付' },
-  { id: 3, no: 'WP202606140003', user: '王五', building: '教师公寓 · A栋', room: '208', time: '2026-06-14 09:00 ~ 11:00', amount: '29.90', status: 'paid', statusText: '待服务' },
-  { id: 4, no: 'WP202606130004', user: '赵六', building: '食宿楼 · 1栋', room: '105', time: '2026-06-13 15:00 ~ 17:00', amount: '29.90', status: 'in_progress', statusText: '服务中' },
-  { id: 5, no: 'WP202606120005', user: '孙七', building: '教师公寓 · D栋', room: '612', time: '2026-06-12 11:00 ~ 13:00', amount: '29.90', status: 'completed', statusText: '已完成' },
+  { id: 1, no: 'WP202606150001', user: '张三', building: '食宿楼 · 3栋', room: '301', time: '2026-06-15 10:00 ~ 12:00', amount: '29.90', status: 'unpaid', statusText: '未支付', employeeId: null },
+  { id: 2, no: 'WP202606150002', user: '李四', building: '学生宿舍 · 1栋', room: '506', time: '2026-06-15 14:00 ~ 16:00', amount: '29.90', status: 'unpaid', statusText: '未支付', employeeId: null },
+  { id: 3, no: 'WP202606140003', user: '王五', building: '教师公寓 · A栋', room: '208', time: '2026-06-14 09:00 ~ 11:00', amount: '29.90', status: 'paid', statusText: '待服务', employeeId: null },
+  { id: 4, no: 'WP202606130004', user: '赵六', building: '食宿楼 · 1栋', room: '105', time: '2026-06-13 15:00 ~ 17:00', amount: '29.90', status: 'in_progress', statusText: '服务中', employeeId: 1 },
+  { id: 5, no: 'WP202606120005', user: '孙七', building: '教师公寓 · D栋', room: '612', time: '2026-06-12 11:00 ~ 13:00', amount: '29.90', status: 'completed', statusText: '已完成', employeeId: 2 },
 ])
 
 const filteredOrders = computed(() => {
@@ -76,13 +93,38 @@ const filteredOrders = computed(() => {
 function confirmPay(order: any) {
   showDialog({
     title: '确认已支付',
-    message: `确定确认订单 ${order.no} 已支付吗？`,
+    message: '确认已收到用户的支付？此操作可回退',
     confirmButtonText: '确认',
     cancelButtonText: '取消',
   }).then(() => {
-    order.status = 'paid'
-    order.statusText = '待服务'
-    showToast('已确认支付')
+    post(`/api/admin/order/confirm-pay/${order.id}`).then(() => {
+      order.status = 'paid'
+      order.statusText = '待服务'
+      showToast('已确认支付')
+    }).catch(() => {
+      showToast('操作失败')
+    })
+  }).catch(() => {
+    // 取消，不做操作
+  })
+}
+
+function revertPay(order: any) {
+  showDialog({
+    title: '回退支付',
+    message: '确认回退此订单？订单将回到未支付状态',
+    confirmButtonText: '确认',
+    cancelButtonText: '取消',
+  }).then(() => {
+    post(`/api/admin/order/revert-pay/${order.id}`).then(() => {
+      order.status = 'unpaid'
+      order.statusText = '未支付'
+      showToast('已回退支付')
+    }).catch(() => {
+      showToast('操作失败')
+    })
+  }).catch(() => {
+    // 取消，不做操作
   })
 }
 </script>
@@ -187,6 +229,11 @@ function confirmPay(order: any) {
   color: #1D1D1F;
 }
 
+.order-actions {
+  display: flex;
+  gap: 8px;
+}
+
 .action-btn {
   padding: 8px 18px;
   border: none;
@@ -205,6 +252,22 @@ function confirmPay(order: any) {
 .confirm-btn:active {
   transform: scale(0.95);
   opacity: 0.9;
+}
+
+.revert-btn {
+  background: #FF3B30;
+  color: white;
+}
+
+.revert-btn:active {
+  transform: scale(0.95);
+  opacity: 0.9;
+}
+
+.revert-btn.disabled {
+  background: #C7C7CC;
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
 .status-badge {

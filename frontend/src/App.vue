@@ -8,44 +8,99 @@
       <div class="header-right"></div>
     </div>
     <router-view />
-    <div class="app-tabbar" v-if="showTabbar">
-      <div
-        v-for="tab in tabs"
-        :key="tab.path"
-        class="tab-item"
-        :class="{ active: currentTab === tab.path }"
-        @click="switchTab(tab.path)"
-      >
-        <van-icon :name="tab.icon" size="22" />
-        <span class="tab-label">{{ tab.label }}</span>
-      </div>
-    </div>
+    <van-tabbar v-model="active" v-if="showTabbar" active-color="#2B95FF" inactive-color="#86868B" @change="onTabChange" :border="false">
+      <van-tabbar-item v-for="tab in tabs" :key="tab.route">
+        <span>{{ tab.name }}</span>
+        <template #icon>
+          <van-icon :name="tab.icon" />
+        </template>
+      </van-tabbar-item>
+    </van-tabbar>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { getToken, getUserInfo } from './utils/auth'
 
 const route = useRoute()
 const router = useRouter()
 
-const tabs = [
-  { path: '/user/home', label: '首页', icon: 'home-o' },
-  { path: '/user/orders', label: '订单', icon: 'bars-o' },
-  { path: '/admin/login', label: '管理', icon: 'manager-o' },
-  { path: '/employee/login', label: '员工', icon: 'contact-o' },
-]
+const active = ref(0)
+
+interface TabConfig {
+  name: string
+  icon: string
+  route: string
+}
+
+const tabsConfig: Record<string, TabConfig[]> = {
+  guest: [
+    { name: '登录', icon: 'contact-o', route: '/login' }
+  ],
+  user: [
+    { name: '首页', icon: 'home-o', route: '/user/home' },
+    { name: '订单', icon: 'orders-o', route: '/user/orders' },
+    { name: '我的', icon: 'contact-o', route: '/user/profile' }
+  ],
+  employee: [
+    { name: '首页', icon: 'home-o', route: '/user/home' },
+    { name: '订单', icon: 'orders-o', route: '/user/orders' },
+    { name: '员工', icon: 'logistics-o', route: '/employee/available' },
+    { name: '我的', icon: 'contact-o', route: '/user/profile' }
+  ],
+  admin: [
+    { name: '订单', icon: 'orders-o', route: '/admin/orders' },
+    { name: '员工', icon: 'friends-o', route: '/admin/employees' },
+    { name: '审核', icon: 'records-o', route: '/admin/employee/audit' },
+    { name: '配置', icon: 'setting-o', route: '/admin/time-config' }
+  ]
+}
+
+const userRole = computed(() => {
+  const token = getToken()
+  if (!token) return 'guest'
+  const userInfo = getUserInfo() as Record<string, unknown> | null
+  if (!userInfo) return 'guest'
+  const role = userInfo.role as number | undefined
+  if (role === 0) return 'user'
+  if (role === 1) return 'employee'
+  if (role === 2) return 'admin'
+  return 'guest'
+})
+
+const tabs = computed(() => {
+  return tabsConfig[userRole.value] || tabsConfig.guest
+})
+
+// 监听路由变化，同步 active 索引
+watch(() => route.path, (path) => {
+  const currentTabs = tabs.value
+  const index = currentTabs.findIndex(tab => path.startsWith(tab.route))
+  if (index >= 0) {
+    active.value = index
+  }
+}, { immediate: true })
+
+function onTabChange(index: number) {
+  const tab = tabs.value[index]
+  if (tab) {
+    router.push(tab.route)
+  }
+}
 
 const showTabbar = computed(() => {
-  return !route.path.includes('/order/create') && 
+  return route.path !== '/login' &&
+         route.path !== '/admin/login' &&
+         route.path !== '/employee/login' &&
+         !route.path.includes('/order/create') && 
          !route.path.includes('/order/pay') &&
-         !route.path.includes('/order/detail') &&
-         !route.path.includes('/login') === false
+         !route.path.includes('/order/detail')
 })
 
 const showHeader = computed(() => {
-  return !route.path.includes('/home')
+  return route.path !== '/login' && !route.path.includes('/home')
 })
 
 const isHome = computed(() => route.path === '/user/home')
@@ -56,9 +111,12 @@ const headerTitle = computed(() => {
     '/user/order/create': '预约清洗',
     '/user/order/pay': '支付',
     '/user/order/detail': '订单详情',
+    '/user/profile': '我的',
     '/admin/login': '管理员登录',
     '/admin/orders': '订单管理',
     '/admin/employees': '员工管理',
+    '/admin/employee/audit': '员工审核',
+    '/admin/time-config': '时间配置',
     '/employee/login': '员工登录',
     '/employee/available': '待抢订单',
     '/employee/my-orders': '我的订单',
@@ -68,19 +126,6 @@ const headerTitle = computed(() => {
   }
   return 'WashPro'
 })
-
-const currentTab = computed(() => {
-  for (const tab of tabs) {
-    if (route.path.startsWith(tab.path.replace('/home', '').replace('/orders', '').replace('/login', ''))) {
-      return tab.path
-    }
-  }
-  return tabs[0].path
-})
-
-function switchTab(path: string) {
-  router.push(path)
-}
 
 function goBack() {
   router.back()
@@ -122,45 +167,5 @@ function goBack() {
   font-weight: 600;
   color: #1D1D1F;
   letter-spacing: -0.02em;
-}
-
-.app-tabbar {
-  position: fixed;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  max-width: 430px;
-  width: 100%;
-  display: flex;
-  justify-content: space-around;
-  align-items: center;
-  background: rgba(255,255,255,0.92);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  padding: 8px 0;
-  padding-bottom: max(8px, env(safe-area-inset-bottom));
-  border-top: 1px solid rgba(0,0,0,0.05);
-  z-index: 100;
-}
-
-.tab-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  padding: 4px 16px;
-  cursor: pointer;
-  color: #86868B;
-  transition: color 0.2s;
-}
-
-.tab-item.active {
-  color: #2B95FF;
-}
-
-.tab-label {
-  font-size: 10px;
-  font-weight: 500;
-  letter-spacing: 0.01em;
 }
 </style>

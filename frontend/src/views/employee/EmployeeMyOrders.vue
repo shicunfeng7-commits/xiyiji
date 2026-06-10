@@ -7,8 +7,9 @@
           <span class="order-status" :class="order.status">{{ order.statusText }}</span>
         </div>
         <div class="order-body">
+          <div class="building-type">{{ order.buildingType }}</div>
           <div class="info-line">{{ order.building }} · {{ order.room }}</div>
-          <div class="info-line time">{{ order.time }}</div>
+          <div class="info-line time">{{ order.date }} {{ order.timeSlot }}</div>
         </div>
         <div class="order-footer">
           <span class="order-amount">¥{{ order.amount }}</span>
@@ -32,30 +33,40 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { showToast } from 'vant'
+import { post } from '../../utils/request'
 
 const myOrders = ref([
   {
     id: 1, no: 'WP202606140003',
-    building: '教师公寓 · A栋', room: '208',
-    time: '2026-06-14 09:00 ~ 11:00',
+    buildingType: '教师公寓',
+    building: 'A栋', room: '208',
+    date: '2026-06-14',
+    timeSlot: '09:00 ~ 11:00',
     amount: '29.90',
     status: 'in_progress',
     statusText: '服务中',
   },
   {
     id: 2, no: 'WP202606120005',
-    building: '食宿楼 · 2栋', room: '612',
-    time: '2026-06-12 11:00 ~ 13:00',
+    buildingType: '食宿楼',
+    building: '2栋', room: '612',
+    date: '2026-06-12',
+    timeSlot: '11:00 ~ 13:00',
     amount: '29.90',
     status: 'completed',
     statusText: '已完成',
   },
 ])
 
-function completeOrder(order: any) {
-  order.status = 'completed'
-  order.statusText = '已完成'
-  showToast('已完成服务')
+async function completeOrder(order: any) {
+  try {
+    await post(`/api/employee/order/complete/${order.id}`)
+    order.status = 'completed'
+    order.statusText = '已完成'
+    showToast('已完成服务')
+  } catch {
+    showToast('操作失败，请重试')
+  }
 }
 </script>
 
@@ -75,6 +86,7 @@ function completeOrder(order: any) {
 .order-header {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   margin-bottom: 10px;
 }
 
@@ -104,6 +116,13 @@ function completeOrder(order: any) {
 .order-body {
   padding-bottom: 12px;
   border-bottom: 1px solid #F5F5F7;
+}
+
+.building-type {
+  font-size: 12px;
+  color: #2B95FF;
+  font-weight: 500;
+  margin-bottom: 2px;
 }
 
 .info-line {

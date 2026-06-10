@@ -37,17 +37,34 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { showToast } from 'vant'
+import { post } from '../../utils/request'
+import { setToken, setUserInfo } from '../../utils/auth'
 
 const router = useRouter()
 const username = ref('')
 const password = ref('')
+const loading = ref(false)
 
-function handleLogin() {
+async function handleLogin() {
   if (!username.value || !password.value) {
     showToast('请输入账号和密码')
     return
   }
-  router.push('/admin/orders')
+
+  loading.value = true
+  try {
+    const res = await post<{ token: string; userInfo: object }>('/api/auth/admin/login', {
+      username: username.value,
+      password: password.value,
+    })
+    setToken(res.data.token)
+    setUserInfo(res.data.userInfo)
+    router.replace('/admin/orders')
+  } catch {
+    showToast('登录失败，请检查账号密码')
+  } finally {
+    loading.value = false
+  }
 }
 </script>
 

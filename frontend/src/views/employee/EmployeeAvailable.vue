@@ -13,16 +13,18 @@
         </div>
         <div class="order-main">
           <div class="order-left">
+            <div class="order-building-type">{{ order.buildingType }}</div>
             <div class="order-location">{{ order.building }} · {{ order.room }}</div>
-            <div class="order-time">
+            <div class="order-date">
               <van-icon name="clock-o" size="12" color="#86868B" />
-              {{ order.time }}
+              {{ order.date }} {{ order.timeSlot }}
             </div>
             <div class="order-remark" v-if="order.remark">{{ order.remark }}</div>
           </div>
           <div class="order-right">
+            <span class="order-status-tag" :class="order.status">{{ order.statusText }}</span>
             <div class="order-price">¥{{ order.amount }}</div>
-            <button class="grab-btn" @click="grabOrder(order)">
+            <button class="grab-btn" @click="handleGrab(order)">
               抢单
             </button>
           </div>
@@ -40,42 +42,65 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { showToast } from 'vant'
+import { showToast, showConfirmDialog } from 'vant'
+import { post } from '../../utils/request'
 
 const availableOrders = ref([
   {
     id: 1,
-    building: '食宿楼 · 3栋', room: '301',
-    time: '2026-06-15 10:00 ~ 12:00',
+    buildingType: '食宿楼',
+    building: '3栋', room: '301',
+    date: '2026-06-15',
+    timeSlot: '10:00 ~ 12:00',
     amount: '29.90',
     urgent: true,
     remark: '用户备注：惠而浦洗衣机',
+    status: 'pending',
+    statusText: '待抢',
   },
   {
     id: 2,
-    building: '教师公寓 · A栋', room: '208',
-    time: '2026-06-15 14:00 ~ 16:00',
+    buildingType: '教师公寓',
+    building: 'A栋', room: '208',
+    date: '2026-06-15',
+    timeSlot: '14:00 ~ 16:00',
     amount: '29.90',
     urgent: false,
     remark: '',
+    status: 'pending',
+    statusText: '待抢',
   },
   {
     id: 3,
-    building: '学生宿舍 · 4栋', room: '506',
-    time: '2026-06-16 09:00 ~ 11:00',
+    buildingType: '学生宿舍',
+    building: '4栋', room: '506',
+    date: '2026-06-16',
+    timeSlot: '09:00 ~ 11:00',
     amount: '29.90',
     urgent: false,
     remark: '需要专业除垢',
+    status: 'pending',
+    statusText: '待抢',
   },
 ])
 
-function grabOrder(order: any) {
-  showToast({
-    message: '抢单成功！',
-    icon: 'success',
-    duration: 1500,
-  })
-  availableOrders.value = availableOrders.value.filter(o => o.id !== order.id)
+async function handleGrab(order: any) {
+  try {
+    await showConfirmDialog({
+      title: '抢单确认',
+      message: `${order.buildingType} · ${order.building} ${order.room}\n${order.date} ${order.timeSlot}\n\n确认抢此订单？`,
+    })
+    // 用户点击确认
+    await post(`/api/employee/order/grab/${order.id}`)
+    showToast({
+      message: '抢单成功！',
+      icon: 'success',
+      duration: 1500,
+    })
+    availableOrders.value = availableOrders.value.filter(o => o.id !== order.id)
+  } catch {
+    // 用户点击取消，不做任何操作
+  }
 }
 </script>
 
@@ -137,7 +162,14 @@ function grabOrder(order: any) {
   margin-bottom: 4px;
 }
 
-.order-time {
+.order-building-type {
+  font-size: 12px;
+  color: #2B95FF;
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.order-date {
   font-size: 13px;
   color: #86868B;
   display: flex;
@@ -157,12 +189,24 @@ function grabOrder(order: any) {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 10px;
+  gap: 8px;
 }
 
 .order-price {
   font-size: 20px;
   font-weight: 700;
+  color: #2B95FF;
+}
+
+.order-status-tag {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 8px;
+}
+
+.order-status-tag.pending {
+  background: rgba(43,149,255,0.08);
   color: #2B95FF;
 }
 
