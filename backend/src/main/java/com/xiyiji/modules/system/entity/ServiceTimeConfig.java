@@ -12,11 +12,10 @@ import java.time.LocalDateTime;
 public class ServiceTimeConfig {
     @TableId(type = IdType.AUTO)
     private Long id;
-    private String period;
     private String periodName;
-    private Integer startHour;
-    private Integer endHour;
+    private String startTime;
+    private String endTime;
     private Boolean enabled;
-    private Integer sortOrder;
     private LocalDateTime createTime;
+    private LocalDateTime updateTime;
 }

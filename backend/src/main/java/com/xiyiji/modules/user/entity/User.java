@@ -14,5 +14,7 @@ public class User {
     private Long id;
     private String nickname;
     private String phone;
+    private Integer role; // 0-普通用户, 1-员工
     private LocalDateTime createTime;
+    private LocalDateTime updateTime;
 }

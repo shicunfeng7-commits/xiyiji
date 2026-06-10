@@ -8,14 +8,16 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 @Data
-@TableName("employee")
-public class Employee {
+@TableName("employee_application")
+public class EmployeeApplication {
     @TableId(type = IdType.AUTO)
     private Long id;
     private Long userId;
     private String name;
     private String phone;
-    private Integer status; // 0-空闲, 1-服务中
-    private Integer isActive; // 0-禁用, 1-启用
+    private Integer status; // 0-待审核, 1-已通过, 2-已拒绝
+    private String remark;
+    private Long handlerId;
+    private LocalDateTime handleTime;
     private LocalDateTime createTime;
 }
