@@ -1,0 +1,242 @@
+<template>
+  <div class="admin-orders">
+    <div class="status-tabs">
+      <div
+        v-for="tab in statusTabs"
+        :key="tab.key"
+        class="status-tab"
+        :class="{ active: currentTab === tab.key }"
+        @click="currentTab = tab.key"
+      >
+        {{ tab.label }}
+        <span class="tab-count">{{ tab.count }}</span>
+      </div>
+    </div>
+
+    <div class="order-list">
+      <div class="order-card" v-for="order in filteredOrders" :key="order.id">
+        <div class="order-header">
+          <span class="order-no">{{ order.no }}</span>
+          <span class="order-user">{{ order.user }}</span>
+        </div>
+        <div class="order-body">
+          <div class="info-line">{{ order.building }} · {{ order.room }}</div>
+          <div class="info-line time">{{ order.time }}</div>
+        </div>
+        <div class="order-footer">
+          <span class="order-amount">¥{{ order.amount }}</span>
+          <button
+            v-if="order.status === 'unpaid'"
+            class="action-btn confirm-btn"
+            @click="confirmPay(order)"
+          >
+            确认已支付
+          </button>
+          <span v-else class="status-badge" :class="order.status">
+            {{ order.statusText }}
+          </span>
+        </div>
+      </div>
+
+      <div v-if="filteredOrders.length === 0" class="empty-state">
+        <van-icon name="records-o" size="48" color="#C7C7CC" />
+        <p>暂无订单</p>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, computed } from 'vue'
+import { showDialog, showToast } from 'vant'
+
+const currentTab = ref('all')
+
+const statusTabs = ref([
+  { key: 'all', label: '全部', count: 5 },
+  { key: 'unpaid', label: '未支付', count: 2 },
+  { key: 'paid', label: '待服务', count: 1 },
+  { key: 'in_progress', label: '服务中', count: 1 },
+  { key: 'completed', label: '已完成', count: 1 },
+])
+
+const orders = ref([
+  { id: 1, no: 'WP202606150001', user: '张三', building: '食宿楼 · 3栋', room: '301', time: '2026-06-15 10:00 ~ 12:00', amount: '29.90', status: 'unpaid', statusText: '未支付' },
+  { id: 2, no: 'WP202606150002', user: '李四', building: '学生宿舍 · 1栋', room: '506', time: '2026-06-15 14:00 ~ 16:00', amount: '29.90', status: 'unpaid', statusText: '未支付' },
+  { id: 3, no: 'WP202606140003', user: '王五', building: '教师公寓 · A栋', room: '208', time: '2026-06-14 09:00 ~ 11:00', amount: '29.90', status: 'paid', statusText: '待服务' },
+  { id: 4, no: 'WP202606130004', user: '赵六', building: '食宿楼 · 1栋', room: '105', time: '2026-06-13 15:00 ~ 17:00', amount: '29.90', status: 'in_progress', statusText: '服务中' },
+  { id: 5, no: 'WP202606120005', user: '孙七', building: '教师公寓 · D栋', room: '612', time: '2026-06-12 11:00 ~ 13:00', amount: '29.90', status: 'completed', statusText: '已完成' },
+])
+
+const filteredOrders = computed(() => {
+  if (currentTab.value === 'all') return orders.value
+  return orders.value.filter(o => o.status === currentTab.value)
+})
+
+function confirmPay(order: any) {
+  showDialog({
+    title: '确认已支付',
+    message: `确定确认订单 ${order.no} 已支付吗？`,
+    confirmButtonText: '确认',
+    cancelButtonText: '取消',
+  }).then(() => {
+    order.status = 'paid'
+    order.statusText = '待服务'
+    showToast('已确认支付')
+  })
+}
+</script>
+
+<style scoped>
+.admin-orders {
+  padding: 8px 16px 100px;
+}
+
+.status-tabs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 8px 0 12px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.status-tab {
+  white-space: nowrap;
+  padding: 8px 16px;
+  background: white;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #86868B;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.status-tab.active {
+  background: #2B95FF;
+  color: white;
+  box-shadow: 0 2px 8px rgba(43,149,255,0.3);
+}
+
+.tab-count {
+  font-size: 11px;
+  background: rgba(0,0,0,0.05);
+  padding: 1px 6px;
+  border-radius: 8px;
+}
+
+.status-tab.active .tab-count {
+  background: rgba(255,255,255,0.2);
+}
+
+.order-card {
+  background: white;
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+
+.order-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.order-no {
+  font-size: 13px;
+  font-weight: 500;
+  color: #86868B;
+}
+
+.order-user {
+  font-size: 13px;
+  color: #1D1D1F;
+  font-weight: 500;
+}
+
+.order-body {
+  padding-bottom: 12px;
+  border-bottom: 1px solid #F5F5F7;
+}
+
+.info-line {
+  font-size: 14px;
+  color: #1D1D1F;
+  padding: 2px 0;
+}
+
+.info-line.time {
+  color: #86868B;
+  font-size: 13px;
+}
+
+.order-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 12px;
+}
+
+.order-amount {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1D1D1F;
+}
+
+.action-btn {
+  padding: 8px 18px;
+  border: none;
+  border-radius: 18px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.confirm-btn {
+  background: #34C759;
+  color: white;
+}
+
+.confirm-btn:active {
+  transform: scale(0.95);
+  opacity: 0.9;
+}
+
+.status-badge {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 10px;
+}
+
+.status-badge.paid {
+  background: rgba(43,149,255,0.1);
+  color: #2B95FF;
+}
+
+.status-badge.in_progress {
+  background: rgba(255,149,0,0.1);
+  color: #FF9500;
+}
+
+.status-badge.completed {
+  background: rgba(52,199,89,0.1);
+  color: #34C759;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 80px 0;
+}
+
+.empty-state p {
+  font-size: 15px;
+  color: #C7C7CC;
+  margin-top: 12px;
+}
+</style>
