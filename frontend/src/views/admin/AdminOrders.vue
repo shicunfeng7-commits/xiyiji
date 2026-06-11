@@ -13,6 +13,15 @@
       </div>
     </div>
 
+    <div class="sort-bar">
+      <van-dropdown-menu>
+        <van-dropdown-item :value="sortType" :options="sortOptions" @change="handleSortChange" />
+      </van-dropdown-menu>
+      <van-button size="small" type="default" @click="toggleSortOrder" class="sort-btn">
+        {{ sortOrder === 'desc' ? '↓' : '↑' }}
+      </van-button>
+    </div>
+
     <div class="order-list">
       <div class="order-card" v-for="order in filteredOrders" :key="order.id">
         <div class="order-header">
@@ -63,31 +72,115 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { showDialog, showToast } from 'vant'
-import { post } from '../../utils/request'
+import { ref, computed, onMounted } from 'vue'
+import { showDialog, showToast, showLoadingToast, closeToast } from 'vant'
+import { post, get } from '../../utils/request'
 
 const currentTab = ref('all')
+const sortType = ref('createTime')
+const sortOrder = ref('desc')
+const loading = ref(false)
+
+const sortOptions = [
+  { text: '按创建时间', value: 'createTime' },
+  { text: '按服务时间', value: 'serviceTime' },
+  { text: '按状态', value: 'status' },
+]
 
 const statusTabs = ref([
-  { key: 'all', label: '全部', count: 5 },
-  { key: 'unpaid', label: '未支付', count: 2 },
-  { key: 'paid', label: '待服务', count: 1 },
-  { key: 'in_progress', label: '服务中', count: 1 },
-  { key: 'completed', label: '已完成', count: 1 },
+  { key: 'all', label: '全部', count: 0 },
+  { key: 'unpaid', label: '未支付', count: 0 },
+  { key: 'paid', label: '待服务', count: 0 },
+  { key: 'in_progress', label: '服务中', count: 0 },
+  { key: 'completed', label: '已完成', count: 0 },
 ])
 
-const orders = ref([
-  { id: 1, no: 'WP202606150001', user: '张三', building: '食宿楼 · 3栋', room: '301', time: '2026-06-15 10:00 ~ 12:00', amount: '29.90', status: 'unpaid', statusText: '未支付', employeeId: null },
-  { id: 2, no: 'WP202606150002', user: '李四', building: '学生宿舍 · 1栋', room: '506', time: '2026-06-15 14:00 ~ 16:00', amount: '29.90', status: 'unpaid', statusText: '未支付', employeeId: null },
-  { id: 3, no: 'WP202606140003', user: '王五', building: '教师公寓 · A栋', room: '208', time: '2026-06-14 09:00 ~ 11:00', amount: '29.90', status: 'paid', statusText: '待服务', employeeId: null },
-  { id: 4, no: 'WP202606130004', user: '赵六', building: '食宿楼 · 1栋', room: '105', time: '2026-06-13 15:00 ~ 17:00', amount: '29.90', status: 'in_progress', statusText: '服务中', employeeId: 1 },
-  { id: 5, no: 'WP202606120005', user: '孙七', building: '教师公寓 · D栋', room: '612', time: '2026-06-12 11:00 ~ 13:00', amount: '29.90', status: 'completed', statusText: '已完成', employeeId: 2 },
-])
+const orders = ref<any[]>([])
 
 const filteredOrders = computed(() => {
   if (currentTab.value === 'all') return orders.value
   return orders.value.filter(o => o.status === currentTab.value)
+})
+
+function handleTabChange() {
+  // 状态切换时保持当前排序
+}
+
+function getStatusKey(status: number): string {
+  const map: Record<number, string> = {
+    0: 'unpaid',
+    1: 'paid',
+    2: 'in_progress',
+    3: 'completed',
+    4: 'cancelled',
+  }
+  return map[status] || 'unknown'
+}
+
+function getStatusText(status: number): string {
+  const map: Record<number, string> = {
+    0: '未支付',
+    1: '待服务',
+    2: '服务中',
+    3: '已完成',
+    4: '已取消',
+  }
+  return map[status] || '未知'
+}
+
+async function loadOrders() {
+  loading.value = true
+  showLoadingToast({ message: '加载中...' })
+  try {
+    const res = await get<{ code: number; data: any[] }>(
+      `/api/admin/orders?sort=${sortType.value}&order=${sortOrder.value}`
+    )
+    if (res.data.code === 200) {
+      orders.value = res.data.data.map((item: any) => ({
+        id: item.id,
+        no: item.orderNo,
+        user: item.userName || '未知用户',
+        building: item.buildingName?.split(' · ')[0] || '',
+        room: item.roomNo,
+        time: `${item.serviceDate} ${item.startTime} ~ ${item.endTime}`,
+        amount: item.amount,
+        status: getStatusKey(item.status),
+        statusText: getStatusText(item.status),
+        employeeId: item.employeeId,
+        buildingName: item.buildingName,
+      }))
+      updateTabCounts()
+    }
+  } catch (error) {
+    showToast('加载失败')
+  } finally {
+    loading.value = false
+    closeToast()
+  }
+}
+
+function updateTabCounts() {
+  statusTabs.value.forEach(tab => {
+    if (tab.key === 'all') {
+      tab.count = orders.value.length
+    } else {
+      tab.count = orders.value.filter(o => o.status === tab.key).length
+    }
+  })
+}
+
+function handleSortChange(value: string) {
+  sortType.value = value
+  loadOrders()
+}
+
+function toggleSortOrder() {
+  sortOrder.value = sortOrder.value === 'desc' ? 'asc' : 'desc'
+  loadOrders()
+}
+
+onMounted(() => {
+  loadOrders()
 })
 
 function confirmPay(order: any) {
@@ -132,6 +225,24 @@ function revertPay(order: any) {
 <style scoped>
 .admin-orders {
   padding: 8px 16px 100px;
+}
+
+.sort-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.sort-btn {
+  font-size: 16px;
+  width: 40px;
+  height: 32px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .status-tabs {

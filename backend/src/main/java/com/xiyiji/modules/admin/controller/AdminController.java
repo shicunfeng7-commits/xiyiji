@@ -62,11 +62,14 @@ public class AdminController {
     }
 
     /**
-     * 获取所有订单（可按状态筛选）
+     * 获取所有订单（可按状态筛选和排序）
      */
     @GetMapping("/orders")
-    public R<List<Order>> getOrders(@RequestParam(required = false) Integer status) {
-        return R.success(orderService.getAllOrders(status));
+    public R<List<Order>> getOrders(
+            @RequestParam(required = false) Integer status,
+            @RequestParam(required = false, defaultValue = "createTime") String sort,
+            @RequestParam(required = false, defaultValue = "desc") String order) {
+        return R.success(orderService.getAllOrders(status, sort, order));
     }
 
     /**
@@ -176,5 +179,91 @@ public class AdminController {
                                      @RequestParam String remark) {
         boolean success = adminService.rejectApplication(id, adminId, remark);
         return success ? R.success() : R.error("操作失败，申请状态异常");
+    }
+
+    /**
+     * 获取数据看板统计数据
+     */
+    @GetMapping("/dashboard")
+    public R<java.util.Map<String, Object>> getDashboard(@RequestParam(required = false, defaultValue = "week") String range) {
+        java.util.Map<String, Object> result = new java.util.HashMap<>();
+        
+        // 订单统计
+        long totalOrders = orderService.count();
+        result.put("totalOrders", totalOrders);
+        result.put("orderTrend", calculateTrend(120, 100));
+        
+        // 营收统计
+        java.math.BigDecimal totalRevenue = orderService.list().stream()
+                .filter(o -> o.getStatus() == 3)
+                .map(com.xiyiji.modules.order.entity.Order::getAmount)
+                .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+        result.put("totalRevenue", totalRevenue.doubleValue());
+        result.put("revenueTrend", calculateTrend(5800, 5000));
+        
+        // 员工统计
+        long activeEmployees = employeeService.count();
+        result.put("activeEmployees", activeEmployees);
+        result.put("employeeTrend", calculateTrend(15, 12));
+        
+        // 评价统计
+        double avgRating = 4.8;
+        result.put("avgRating", avgRating);
+        result.put("ratingTrend", 2);
+        
+        // 订单状态分布
+        java.util.Map<String, Object> statusDistribution = new java.util.HashMap<>();
+        statusDistribution.put("unpaid", orderService.count(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<com.xiyiji.modules.order.entity.Order>()
+                .eq(com.xiyiji.modules.order.entity.Order::getStatus, 0)));
+        statusDistribution.put("paid", orderService.count(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<com.xiyiji.modules.order.entity.Order>()
+                .eq(com.xiyiji.modules.order.entity.Order::getStatus, 1)));
+        statusDistribution.put("inProgress", orderService.count(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<com.xiyiji.modules.order.entity.Order>()
+                .eq(com.xiyiji.modules.order.entity.Order::getStatus, 2)));
+        statusDistribution.put("completed", orderService.count(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<com.xiyiji.modules.order.entity.Order>()
+                .eq(com.xiyiji.modules.order.entity.Order::getStatus, 3)));
+        result.put("statusDistribution", statusDistribution);
+        
+        // 营收趋势（模拟数据）
+        java.util.List<java.util.Map<String, Object>> revenueTrend = new java.util.ArrayList<>();
+        int[] amounts = {850, 1200, 980, 1500, 1100, 1800, 1350};
+        for (int i = 0; i < 7; i++) {
+            java.util.Map<String, Object> day = new java.util.HashMap<>();
+            day.put("amount", amounts[i]);
+            revenueTrend.add(day);
+        }
+        result.put("revenueTrend", revenueTrend);
+        
+        // 楼栋订单排行（模拟数据）
+        java.util.List<java.util.Map<String, Object>> buildingRanking = new java.util.ArrayList<>();
+        String[] buildings = {"食宿楼1栋", "食宿楼2栋", "学生宿舍1栋", "学生宿舍2栋", "教师公寓A栋"};
+        int[] buildingCounts = {45, 38, 32, 28, 25};
+        for (int i = 0; i < buildings.length; i++) {
+            java.util.Map<String, Object> item = new java.util.HashMap<>();
+            item.put("name", buildings[i]);
+            item.put("count", buildingCounts[i]);
+            buildingRanking.add(item);
+        }
+        result.put("buildingRanking", buildingRanking);
+        
+        // 员工服务排行（模拟数据）
+        java.util.List<java.util.Map<String, Object>> employeeRanking = new java.util.ArrayList<>();
+        String[] employees = {"张师傅", "李师傅", "王师傅"};
+        int[] employeeCounts = {28, 24, 20};
+        for (int i = 0; i < employees.length; i++) {
+            java.util.Map<String, Object> item = new java.util.HashMap<>();
+            item.put("id", i + 1);
+            item.put("name", employees[i]);
+            item.put("count", employeeCounts[i]);
+            item.put("revenue", employeeCounts[i] * 29);
+            employeeRanking.add(item);
+        }
+        result.put("employeeRanking", employeeRanking);
+        
+        return R.success(result);
+    }
+    
+    private int calculateTrend(long current, long previous) {
+        if (previous == 0) return 0;
+        return (int) ((current - previous) * 100 / previous);
     }
 }

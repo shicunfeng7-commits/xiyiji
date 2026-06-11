@@ -150,7 +150,8 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { showToast } from 'vant'
+import { showToast, showLoadingToast, closeToast } from 'vant'
+import { post } from '../../utils/request'
 
 const router = useRouter()
 
@@ -292,7 +293,7 @@ function openTimeRange() {
 const remark = ref('')
 
 // ---- 提交 ----
-function handleSubmit() {
+async function handleSubmit() {
   if (!selectedCategory.value || !buildingName.value) {
     showToast('请选择楼栋')
     return
@@ -309,7 +310,29 @@ function handleSubmit() {
     showToast('请选择时间段')
     return
   }
-  router.push('/user/order/pay')
+
+  showLoadingToast({ message: '提交中...' })
+  try {
+    const res = await post<{ code: number; data: { id: number } }>('/api/user/order/create', {
+      buildingName: `${currentCategoryLabel.value} · ${buildingName.value}`,
+      roomNo: roomNo.value,
+      serviceDate: serviceDate.value,
+      startTime: startTime.value,
+      endTime: endTime.value,
+      remark: remark.value,
+      amount: 29.9,
+    })
+    if (res.data.code === 200) {
+      showToast('订单创建成功')
+      setTimeout(() => {
+        router.push(`/user/order/pay?id=${res.data.data.id}`)
+      }, 1500)
+    }
+  } catch (error) {
+    showToast('订单创建失败，请重试')
+  } finally {
+    closeToast()
+  }
 }
 </script>
 

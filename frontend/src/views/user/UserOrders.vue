@@ -39,7 +39,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { showToast, showLoading, hideLoading } from 'vant'
+import { showToast, showLoadingToast, closeToast } from 'vant'
 import { get } from '../../utils/request'
 
 const router = useRouter()
@@ -70,7 +70,7 @@ interface Order {
 
 async function loadOrders() {
   loading.value = true
-  showLoading({ message: '加载中...' })
+  showLoadingToast({ message: '加载中...' })
   try {
     const res = await get<{ code: number; data: any[] }>('/api/user/order/list')
     if (res.data.code === 200) {
@@ -92,7 +92,7 @@ async function loadOrders() {
     showToast('加载订单失败')
   } finally {
     loading.value = false
-    hideLoading()
+    closeToast()
   }
 }
 

@@ -17,6 +17,7 @@ const routes = [
   
   // 管理端
   { path: '/admin/login', name: 'AdminLogin', component: () => import('../views/admin/AdminLogin.vue') },
+  { path: '/admin/dashboard', name: 'AdminDashboard', component: () => import('../views/admin/AdminDashboard.vue') },
   { path: '/admin/orders', name: 'AdminOrders', component: () => import('../views/admin/AdminOrders.vue') },
   { path: '/admin/employees', name: 'AdminEmployees', component: () => import('../views/admin/AdminEmployees.vue') },
   { path: '/admin/employee/audit', name: 'AdminEmployeeAudit', component: () => import('../views/admin/AdminEmployeeAudit.vue') },

@@ -64,6 +64,20 @@
       </div>
     </div>
 
+    <!-- 服务评价 -->
+    <div v-if="order?.status === 3 && review" class="review-card">
+      <div class="card-header">
+        <span class="section-title">服务评价</span>
+      </div>
+      <div class="review-content">
+        <div class="review-score">
+          <van-icon v-for="i in 5" :key="i" name="star" :size="24" :color="i <= review.score ? '#FFD700' : '#E8E8ED'" />
+        </div>
+        <div v-if="review.content" class="review-text">{{ review.content }}</div>
+        <div class="review-time">{{ formatTime(review.createTime) }}</div>
+      </div>
+    </div>
+
     <!-- 操作日志 -->
     <div class="logs-section">
       <div class="section-title">操作记录</div>
@@ -86,15 +100,50 @@
     <div class="bottom-actions">
       <button v-if="order?.status === 0" class="action-btn cancel" @click="handleCancel">取消订单</button>
       <button v-if="order?.status === 0" class="action-btn pay" @click="goPay">去支付</button>
-      <button v-if="order?.status === 3" class="action-btn complete" @click="goHome">完成</button>
+      <button v-if="order?.status === 3 && !hasReview" class="action-btn review" @click="showReviewModal = true">去评价</button>
+      <button v-if="order?.status === 3 && hasReview" class="action-btn completed" @click="goHome">返回首页</button>
     </div>
+
+    <!-- 评价弹窗 -->
+    <van-dialog v-model:show="showReviewModal" title="评价服务" show-cancel-button>
+      <div class="review-modal-content">
+        <div class="review-score-section">
+          <div class="score-label">评分</div>
+          <div class="star-group">
+            <van-icon
+              v-for="i in 5"
+              :key="i"
+              name="star"
+              :size="40"
+              :color="i <= reviewScore ? '#FFD700' : '#E8E8ED'"
+              class="star-item"
+              @click="reviewScore = i"
+            />
+          </div>
+          <div class="score-text">{{ scoreText }}</div>
+        </div>
+        <div class="review-input-section">
+          <div class="input-label">评价内容</div>
+          <textarea
+            v-model="reviewContent"
+            class="review-textarea"
+            placeholder="请输入您的评价..."
+            maxlength="500"
+          ></textarea>
+          <div class="input-count">{{ reviewContent.length }}/500</div>
+        </div>
+      </div>
+      <template #confirm>
+        <button class="confirm-btn" @click="submitReview">提交评价</button>
+      </template>
+    </van-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { showToast, showLoading, hideLoading } from 'vant'
+import { showToast, showLoadingToast, closeToast, showDialog } from 'vant'
 import { get, post } from '../../utils/request'
 
 const route = useRoute()
@@ -103,6 +152,11 @@ const router = useRouter()
 const order = ref<any>(null)
 const logs = ref<any[]>([])
 const loading = ref(true)
+const review = ref<any>(null)
+const hasReview = ref(false)
+const showReviewModal = ref(false)
+const reviewScore = ref(5)
+const reviewContent = ref('')
 
 const timelineSteps = [
   { status: 0, label: '订单创建', icon: 'circle-o' },
@@ -165,9 +219,60 @@ function getStatusChangeText(from?: number, to?: number): string {
   return `${statusTextMap[from]} → ${statusTextMap[to ?? 0]}`
 }
 
+const scoreText = computed(() => {
+  const texts = ['', '非常差', '差', '一般', '好', '非常好']
+  return texts[reviewScore.value] || ''
+})
+
+async function loadReview() {
+  if (order.value?.status !== 3) return
+  try {
+    const orderId = route.query.id
+    const res = await get<{ code: number; data: boolean }>(`/api/user/order/review/check/${orderId}`)
+    if (res.data.code === 200) {
+      hasReview.value = res.data.data
+      if (hasReview.value) {
+        const reviewRes = await get<{ code: number; data: any }>(`/api/user/order/review/${orderId}`)
+        if (reviewRes.data.code === 200) {
+          review.value = reviewRes.data.data
+        }
+      }
+    }
+  } catch (error) {
+    console.log('加载评价失败')
+  }
+}
+
+async function submitReview() {
+  if (reviewScore.value === 0) {
+    showToast('请选择评分')
+    return
+  }
+  const orderId = route.query.id
+  try {
+    const res = await post<{ code: number }>('/api/user/order/review', {
+      orderId,
+      score: reviewScore.value,
+      content: reviewContent.value,
+    })
+    if (res.data.code === 200) {
+      showToast('评价成功')
+      showReviewModal.value = false
+      hasReview.value = true
+      review.value = {
+        score: reviewScore.value,
+        content: reviewContent.value,
+        createTime: new Date().toISOString(),
+      }
+    }
+  } catch (error: any) {
+    showToast(error?.response?.data?.msg || '评价失败')
+  }
+}
+
 async function loadOrder() {
   loading.value = true
-  showLoading({ message: '加载中...' })
+  showLoadingToast({ message: '加载中...' })
   try {
     const orderId = route.query.id
     const res = await get<{ code: number; data: any }>(`/api/user/order/detail/${orderId}`)
@@ -178,7 +283,7 @@ async function loadOrder() {
     showToast('加载订单失败')
   } finally {
     loading.value = false
-    hideLoading()
+    closeToast()
   }
 }
 
@@ -220,6 +325,9 @@ function goHome() {
 onMounted(() => {
   loadOrder()
   loadLogs()
+  setTimeout(() => {
+    loadReview()
+  }, 500)
 })
 </script>
 
@@ -431,6 +539,118 @@ onMounted(() => {
   color: #1D1D1F;
 }
 
+/* ====== 服务评价 ====== */
+.review-card {
+  background: white;
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.review-content {
+  padding-top: 12px;
+}
+
+.review-score {
+  margin-bottom: 12px;
+}
+
+.review-text {
+  font-size: 14px;
+  color: #1D1D1F;
+  line-height: 1.6;
+  margin-bottom: 8px;
+}
+
+.review-time {
+  font-size: 12px;
+  color: #86868B;
+}
+
+/* ====== 评价弹窗 ====== */
+.review-modal-content {
+  padding: 16px 0;
+}
+
+.review-score-section {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.score-label {
+  font-size: 14px;
+  color: #86868B;
+  margin-bottom: 12px;
+  display: block;
+}
+
+.star-group {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.star-item {
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.star-item:active {
+  transform: scale(1.1);
+}
+
+.score-text {
+  font-size: 14px;
+  color: #2B95FF;
+}
+
+.review-input-section {
+  margin-top: 12px;
+}
+
+.input-label {
+  font-size: 14px;
+  color: #86868B;
+  margin-bottom: 8px;
+  display: block;
+}
+
+.review-textarea {
+  width: 100%;
+  height: 100px;
+  padding: 12px;
+  border: 1px solid #E8E8ED;
+  border-radius: 12px;
+  font-size: 14px;
+  resize: none;
+  box-sizing: border-box;
+}
+
+.review-textarea:focus {
+  outline: none;
+  border-color: #2B95FF;
+}
+
+.input-count {
+  text-align: right;
+  font-size: 12px;
+  color: #C7C7CC;
+  margin-top: 8px;
+}
+
+.confirm-btn {
+  width: 100%;
+  padding: 12px;
+  background: #2B95FF;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
 /* ====== 操作日志 ====== */
 .logs-section {
   background: white;
@@ -531,6 +751,12 @@ onMounted(() => {
   background: #34C759;
   color: white;
   box-shadow: 0 4px 14px rgba(52,199,89,0.3);
+}
+
+.action-btn.review {
+  background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+  color: white;
+  box-shadow: 0 4px 14px rgba(255,215,0,0.3);
 }
 
 .action-btn:active {

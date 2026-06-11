@@ -187,12 +187,30 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     }
 
     @Override
-    public List<Order> getAllOrders(Integer status) {
+    public List<Order> getAllOrders(Integer status, String sort, String order) {
         LambdaQueryWrapper<Order> wrapper = new LambdaQueryWrapper<>();
         if (status != null) {
             wrapper.eq(Order::getStatus, status);
         }
-        wrapper.orderByDesc(Order::getCreateTime);
+        
+        boolean isDesc = "desc".equalsIgnoreCase(order);
+        
+        if ("serviceTime".equals(sort)) {
+            if (isDesc) {
+                wrapper.orderByDesc(Order::getServiceDate).orderByDesc(Order::getStartTime);
+            } else {
+                wrapper.orderByAsc(Order::getServiceDate).orderByAsc(Order::getStartTime);
+            }
+        } else if ("status".equals(sort)) {
+            wrapper.orderByAsc(Order::getStatus);
+        } else {
+            if (isDesc) {
+                wrapper.orderByDesc(Order::getCreateTime);
+            } else {
+                wrapper.orderByAsc(Order::getCreateTime);
+            }
+        }
+        
         return list(wrapper);
     }
 

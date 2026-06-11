@@ -3,7 +3,20 @@
     <div class="notification-banner">
       <van-icon name="info-o" size="16" color="#2B95FF" />
       <span>新订单实时推送，点击即可抢单</span>
+      <van-badge :content="unreadCount" class="notification-badge" />
     </div>
+
+    <!-- 新订单通知 -->
+    <van-popup v-model:show="showNotification" position="top" :style="{ height: 'auto' }">
+      <div class="notification-item" @click="handleNotificationClick">
+        <van-icon name="bell-o" size="24" color="#2B95FF" />
+        <div class="notification-content">
+          <div class="notification-title">新订单提醒</div>
+          <div class="notification-desc">{{ notificationMessage }}</div>
+        </div>
+        <van-icon name="chevron-right" size="20" color="#C7C7CC" />
+      </div>
+    </van-popup>
 
     <div class="order-list">
       <div class="order-card" v-for="order in availableOrders" :key="order.id">
@@ -41,48 +54,136 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { showToast, showConfirmDialog } from 'vant'
-import { post } from '../../utils/request'
+import { ref, onMounted, onUnmounted } from 'vue'
+import { showToast, showConfirmDialog, showNotify } from 'vant'
+import { post, get } from '../../utils/request'
 
-const availableOrders = ref([
-  {
-    id: 1,
-    buildingType: '食宿楼',
-    building: '3栋', room: '301',
-    date: '2026-06-15',
-    timeSlot: '10:00 ~ 12:00',
-    amount: '29.90',
-    urgent: true,
-    remark: '用户备注：惠而浦洗衣机',
-    status: 'pending',
-    statusText: '待抢',
-  },
-  {
-    id: 2,
-    buildingType: '教师公寓',
-    building: 'A栋', room: '208',
-    date: '2026-06-15',
-    timeSlot: '14:00 ~ 16:00',
-    amount: '29.90',
+const availableOrders = ref<any[]>([])
+const showNotification = ref(false)
+const notificationMessage = ref('')
+const unreadCount = ref(0)
+
+let ws: WebSocket | null = null
+let reconnectTimer: number | null = null
+
+function connectWebSocket() {
+  // 获取token用于WebSocket连接认证
+  const token = localStorage.getItem('token') || ''
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+  const wsUrl = `${protocol}//${window.location.host}/ws/employee?token=${token}`
+  
+  ws = new WebSocket(wsUrl)
+  
+  ws.onopen = () => {
+    console.log('WebSocket connected')
+    if (reconnectTimer) {
+      clearTimeout(reconnectTimer)
+      reconnectTimer = null
+    }
+  }
+  
+  ws.onmessage = (event) => {
+    try {
+      const message = JSON.parse(event.data)
+      if (message.type === 'NEW_ORDER') {
+        handleNewOrder(message)
+      }
+    } catch (error) {
+      console.error('WebSocket message parse error:', error)
+    }
+  }
+  
+  ws.onerror = (error) => {
+    console.error('WebSocket error:', error)
+  }
+  
+  ws.onclose = () => {
+    console.log('WebSocket disconnected, reconnecting...')
+    reconnectTimer = window.setTimeout(() => {
+      connectWebSocket()
+    }, 5000)
+  }
+}
+
+function handleNewOrder(message: any) {
+  unreadCount.value++
+  
+  // 解析楼栋信息
+  const buildingInfo = message.buildingName?.split(' · ') || ['', '']
+  const buildingType = buildingInfo[0] || ''
+  const building = buildingInfo[1] || ''
+  
+  const newOrder = {
+    id: message.orderId,
+    buildingType,
+    building,
+    room: message.roomNo,
+    date: message.serviceDate,
+    timeSlot: `${message.startTime} ~ ${message.endTime}`,
+    amount: message.amount?.toString() || '29.90',
     urgent: false,
     remark: '',
     status: 'pending',
     statusText: '待抢',
-  },
-  {
-    id: 3,
-    buildingType: '学生宿舍',
-    building: '4栋', room: '506',
-    date: '2026-06-16',
-    timeSlot: '09:00 ~ 11:00',
-    amount: '29.90',
-    urgent: false,
-    remark: '需要专业除垢',
-    status: 'pending',
-    statusText: '待抢',
-  },
-])
+  }
+  
+  // 添加到列表开头
+  availableOrders.value.unshift(newOrder)
+  
+  // 显示通知
+  notificationMessage.value = `${buildingType} · ${building} ${message.roomNo}\n${message.serviceDate} ${message.startTime}`
+  showNotification.value = true
+  
+  // 3秒后自动关闭通知
+  setTimeout(() => {
+    showNotification.value = false
+  }, 3000)
+  
+  // 显示Toast提示
+  showNotify({
+    type: 'primary',
+    message: '有新订单！',
+    duration: 2000,
+  })
+}
+
+function handleNotificationClick() {
+  showNotification.value = false
+  unreadCount.value = 0
+}
+
+async function loadOrders() {
+  try {
+    const res = await get<{ code: number; data: any[] }>('/api/employee/order/available')
+    if (res.data.code === 200) {
+      availableOrders.value = res.data.data.map((item: any) => {
+        const buildingInfo = item.buildingName?.split(' · ') || ['', '']
+        return {
+          id: item.id,
+          buildingType: buildingInfo[0] || '',
+          building: buildingInfo[1] || '',
+          room: item.roomNo,
+          date: item.serviceDate,
+          timeSlot: `${item.startTime} ~ ${item.endTime}`,
+          amount: item.amount?.toString() || '29.90',
+          urgent: isUrgent(item.serviceDate, item.startTime),
+          remark: item.remark || '',
+          status: 'pending',
+          statusText: '待抢',
+        }
+      })
+    }
+  } catch (error) {
+    console.log('加载订单失败')
+  }
+}
+
+function isUrgent(date: string, time: string): boolean {
+  const now = new Date()
+  const orderTime = new Date(`${date}T${time}`)
+  const diffMinutes = (orderTime.getTime() - now.getTime()) / (1000 * 60)
+  return diffMinutes < 60
+}
 
 async function handleGrab(order: any) {
   try {
@@ -90,7 +191,7 @@ async function handleGrab(order: any) {
       title: '抢单确认',
       message: `${order.buildingType} · ${order.building} ${order.room}\n${order.date} ${order.timeSlot}\n\n确认抢此订单？`,
     })
-    // 用户点击确认
+    
     await post(`/api/employee/order/grab/${order.id}`)
     showToast({
       message: '抢单成功！',
@@ -102,6 +203,20 @@ async function handleGrab(order: any) {
     // 用户点击取消，不做任何操作
   }
 }
+
+onMounted(() => {
+  loadOrders()
+  connectWebSocket()
+})
+
+onUnmounted(() => {
+  if (ws) {
+    ws.close()
+  }
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer)
+  }
+})
 </script>
 
 <style scoped>
@@ -120,6 +235,38 @@ async function handleGrab(order: any) {
   color: #2B95FF;
   font-weight: 500;
   margin-bottom: 12px;
+  position: relative;
+}
+
+.notification-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+}
+
+.notification-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: white;
+}
+
+.notification-content {
+  flex: 1;
+}
+
+.notification-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1D1D1F;
+  margin-bottom: 4px;
+}
+
+.notification-desc {
+  font-size: 13px;
+  color: #86868B;
+  white-space: pre-wrap;
 }
 
 .order-card {
