@@ -63,8 +63,18 @@
     <!-- 营收趋势 -->
     <div class="section">
       <h2 class="section-title">营收趋势</h2>
-      <div class="chart-bars">
-        <div v-for="(item, i) in revenueTrend" :key="i" class="chart-col">
+      <div class="chart-scroll" v-if="revenueTrend.length > 7">
+        <div class="chart-bars" :style="{ width: (revenueTrend.length * 44) + 'px' }">
+          <div v-for="(item, i) in revenueTrend" :key="i" class="chart-col" style="width:40px">
+            <div class="chart-bar" :style="{ height: (item.percentage || 4) + '%' }">
+              <span class="bar-val">¥{{ item.amount }}</span>
+            </div>
+            <span class="bar-label">{{ item.label }}</span>
+          </div>
+        </div>
+      </div>
+      <div class="chart-bars" v-else>
+        <div v-for="(item, i) in revenueTrend" :key="i" class="chart-col" :style="{ width: (88 / revenueTrend.length) + '%' }">
           <div class="chart-bar" :style="{ height: (item.percentage || 4) + '%' }">
             <span class="bar-val">¥{{ item.amount }}</span>
           </div>
@@ -99,7 +109,8 @@ const dateRange = ref('week')
 const ranges = [
   { key: 'week', label: '本周' },
   { key: 'month', label: '本月' },
-  { key: 'quarter', label: '季度' },
+  { key: 'h1', label: '上半年' },
+  { key: 'h2', label: '下半年' },
 ]
 
 const today = computed(() => {
@@ -140,9 +151,8 @@ async function loadData() {
 
       const rd = d.revenueTrend || []
       const max = Math.max(...rd.map((i: any) => i.amount || 0), 1)
-      const labels = ['周一','周二','周三','周四','周五','周六','周日']
-      revenueTrend.value = rd.map((i: any, idx: number) => ({
-        label: labels[idx], amount: i.amount || 0, percentage: Math.round(((i.amount || 0) / max) * 100),
+      revenueTrend.value = rd.map((i: any) => ({
+        label: i.label, amount: i.amount || 0, percentage: Math.round(((i.amount || 0) / max) * 100),
       }))
 
       const bd = d.buildingRanking || []
@@ -218,10 +228,12 @@ onMounted(loadData)
 .s-bar.done { background: #34C759; }
 .s-count { font-size: 13px; font-weight: 600; color: #86868B; width: 32px; text-align: right; }
 
-.chart-bars { display: flex; justify-content: space-between; align-items: flex-end; height: 120px; padding-top: 12px; }
-.chart-col { display: flex; flex-direction: column; align-items: center; width: 12%; height: 100%; justify-content: flex-end; }
+.chart-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; padding-top: 8px; }
+.chart-scroll::-webkit-scrollbar { display: none; }
+.chart-bars { display: flex; justify-content: space-between; align-items: flex-end; height: 140px; padding-top: 28px; min-width: 100%; }
+.chart-col { display: flex; flex-direction: column; align-items: center; height: 100%; justify-content: flex-end; }
 .chart-bar { width: 24px; background: #1D1D1F; border-radius: 6px 6px 0 0; position: relative; transition: height 0.5s cubic-bezier(0.25,0.1,0.25,1); min-height: 4px; }
-.bar-val { position: absolute; top: -20px; left: 50%; transform: translateX(-50%); font-size: 10px; color: #86868B; white-space: nowrap; }
+.bar-val { position: absolute; top: -22px; left: 50%; transform: translateX(-50%); font-size: 9px; color: #86868B; white-space: nowrap; }
 .bar-label { font-size: 10px; color: #C7C7CC; margin-top: 6px; }
 
 .rank-row { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid #F5F5F7; }

@@ -181,7 +181,7 @@ onMounted(() => { loadUserInfo(); fetchApplyStatus() })
 
 .profile-header {
   background: linear-gradient(135deg, #007AFF, #5856D6);
-  padding: 44px 20px 36px; display: flex; align-items: center; justify-content: space-between;
+  padding: 44px 20px 36px; display: flex; align-items: center; justify-content: center; position: relative;
 }
 .avatar-section { display: flex; flex-direction: column; align-items: center; gap: 8px; }
 .avatar-wrapper { cursor: pointer; }
@@ -192,9 +192,10 @@ onMounted(() => { loadUserInfo(); fetchApplyStatus() })
 .avatar-img { width: 100%; height: 100%; object-fit: cover; }
 .header-nickname { font-size: 15px; font-weight: 600; color: white; margin-top: 2px; }
 .edit-link {
+  position: absolute; right: 20px; top: 50%; transform: translateY(-50%);
   font-size: 12px; color: rgba(255,255,255,0.8); cursor: pointer;
   padding: 7px 16px; background: rgba(255,255,255,0.15); border-radius: 14px;
-  white-space: nowrap; flex-shrink: 0; margin-left: auto;
+  white-space: nowrap;
 }
 .edit-link:active { background: rgba(255,255,255,0.3); }
 

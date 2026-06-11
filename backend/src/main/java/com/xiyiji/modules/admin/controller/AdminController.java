@@ -304,25 +304,56 @@ public class AdminController {
                 .eq(com.xiyiji.modules.order.entity.Order::getStatus, 3)));
         result.put("statusDistribution", statusDistribution);
         
-        // 营收趋势（根据range参数动态调整）
+        // 营收趋势
         java.util.List<java.util.Map<String, Object>> revenueTrend = new java.util.ArrayList<>();
         java.time.LocalDate today = java.time.LocalDate.now();
-        int days = "quarter".equals(range) ? 90 : "month".equals(range) ? 30 : 7;
+        java.util.List<com.xiyiji.modules.order.entity.Order> completedOrders = orderService.list(
+            new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<com.xiyiji.modules.order.entity.Order>()
+                .eq(com.xiyiji.modules.order.entity.Order::getStatus, 3)
+                .isNotNull(com.xiyiji.modules.order.entity.Order::getCompleteTime));
         String[] weekDays = {"周一","周二","周三","周四","周五","周六","周日"};
-        for (int i = days - 1; i >= 0; i--) {
-            java.time.LocalDate date = today.minusDays(i);
-            String label = days <= 7 ? weekDays[(date.getDayOfWeek().getValue() + 5) % 7]
-                    : date.getMonthValue() + "/" + date.getDayOfMonth();
-            java.math.BigDecimal dayRevenue = orderService.list(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<com.xiyiji.modules.order.entity.Order>()
-                    .eq(com.xiyiji.modules.order.entity.Order::getStatus, 3)
-                    .apply("DATE(complete_time) = {0}", date.toString()))
-                    .stream()
-                    .map(o -> o.getAmount() != null ? o.getAmount() : java.math.BigDecimal.ZERO)
-                    .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
-            java.util.Map<String, Object> day = new java.util.HashMap<>();
-            day.put("label", label);
-            day.put("amount", dayRevenue.doubleValue());
-            revenueTrend.add(day);
+
+        if ("h1".equals(range) || "h2".equals(range)) {
+            int startMonth = "h1".equals(range) ? 1 : 7;
+            for (int m = startMonth; m < startMonth + 6; m++) {
+                java.math.BigDecimal monthSum = java.math.BigDecimal.ZERO;
+                for (com.xiyiji.modules.order.entity.Order o : completedOrders) {
+                    if (o.getCompleteTime() != null) {
+                        java.time.LocalDate d = o.getCompleteTime().toLocalDate();
+                        if (d.getMonthValue() == m) {
+                            monthSum = monthSum.add(o.getAmount() != null ? o.getAmount() : java.math.BigDecimal.ZERO);
+                        }
+                    }
+                }
+                java.util.Map<String, Object> item = new java.util.HashMap<>();
+                item.put("label", m + "月"); item.put("amount", monthSum.doubleValue()); revenueTrend.add(item);
+            }
+        } else if ("month".equals(range)) {
+            int daysInMonth = today.lengthOfMonth();
+            for (int d = 1; d <= daysInMonth; d++) {
+                java.time.LocalDate date = today.withDayOfMonth(d);
+                java.math.BigDecimal daySum = java.math.BigDecimal.ZERO;
+                for (com.xiyiji.modules.order.entity.Order o : completedOrders) {
+                    if (o.getCompleteTime() != null && o.getCompleteTime().toLocalDate().equals(date)) {
+                        daySum = daySum.add(o.getAmount() != null ? o.getAmount() : java.math.BigDecimal.ZERO);
+                    }
+                }
+                java.util.Map<String, Object> item = new java.util.HashMap<>();
+                item.put("label", d + "日"); item.put("amount", daySum.doubleValue()); revenueTrend.add(item);
+            }
+        } else {
+            java.time.LocalDate monday = today.with(java.time.DayOfWeek.MONDAY);
+            for (java.time.LocalDate d = monday; !d.isAfter(today); d = d.plusDays(1)) {
+                int idx = d.getDayOfWeek().getValue() - 1;
+                java.math.BigDecimal daySum = java.math.BigDecimal.ZERO;
+                for (com.xiyiji.modules.order.entity.Order o : completedOrders) {
+                    if (o.getCompleteTime() != null && o.getCompleteTime().toLocalDate().equals(d)) {
+                        daySum = daySum.add(o.getAmount() != null ? o.getAmount() : java.math.BigDecimal.ZERO);
+                    }
+                }
+                java.util.Map<String, Object> item = new java.util.HashMap<>();
+                item.put("label", weekDays[idx]); item.put("amount", daySum.doubleValue()); revenueTrend.add(item);
+            }
         }
         result.put("revenueTrend", revenueTrend);
         
