@@ -37,6 +37,15 @@ const router = createRouter({
 // 路由守卫：未登录跳转到 /login
 router.beforeEach((to, from, next) => {
   const token = getToken()
+  const userInfo = localStorage.getItem('userInfo')
+  let userRole = null
+  if (userInfo) {
+    try {
+      userRole = JSON.parse(userInfo).role
+    } catch (e) {
+      console.error('解析用户信息失败', e)
+    }
+  }
 
   // 登录页和根路径直接放行
   if (to.path === '/login' || to.path === '/') {
@@ -53,6 +62,12 @@ router.beforeEach((to, from, next) => {
   // 未登录时，访问任何需要登录的页面都跳转到 /login
   if (!token) {
     next('/login')
+    return
+  }
+
+  // 管理员登录后访问非管理端页面，重定向到管理端首页
+  if (userRole === 'admin' && !to.path.startsWith('/admin/')) {
+    next('/admin/dashboard')
     return
   }
 

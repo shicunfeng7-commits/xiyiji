@@ -33,14 +33,17 @@
         <button class="order-now-btn" @click="router.push('/user/order/create')">去预约</button>
       </div>
     </div>
+    
+    <BottomNav />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { showToast, showLoadingToast, closeToast } from 'vant'
 import { get } from '../../utils/request'
+import BottomNav from '../../components/BottomNav.vue'
 
 const router = useRouter()
 const orders = ref<any[]>([])
@@ -52,20 +55,6 @@ const statusMap: Record<number, { text: string; class: string }> = {
   2: { text: '服务中', class: 'status-progress' },
   3: { text: '已完成', class: 'status-completed' },
   4: { text: '已取消', class: 'status-cancelled' },
-}
-
-interface Order {
-  id: number
-  orderNo: string
-  buildingName: string
-  roomNo: string
-  serviceDate: string
-  startTime: string
-  endTime: string
-  amount: string | number
-  status: number
-  statusText: string
-  statusClass: string
 }
 
 async function loadOrders() {
@@ -111,7 +100,9 @@ onMounted(() => {
 
 <style scoped>
 .user-orders {
-  padding: 12px 16px 100px;
+  padding: 12px 16px;
+  min-height: 100vh;
+  background: #F5F5F7;
 }
 
 .loading-state {

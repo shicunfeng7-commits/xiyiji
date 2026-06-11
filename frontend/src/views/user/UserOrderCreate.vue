@@ -292,8 +292,16 @@ function openTimeRange() {
 // ---- 备注 ----
 const remark = ref('')
 
+// ---- 提交状态 ----
+const isSubmitting = ref(false)
+
 // ---- 提交 ----
 async function handleSubmit() {
+  if (isSubmitting.value) {
+    showToast('请稍候，正在提交...')
+    return
+  }
+  
   if (!selectedCategory.value || !buildingName.value) {
     showToast('请选择楼栋')
     return
@@ -311,6 +319,7 @@ async function handleSubmit() {
     return
   }
 
+  isSubmitting.value = true
   showLoadingToast({ message: '提交中...' })
   try {
     const res = await post<{ code: number; data: { id: number } }>('/api/user/order/create', {
@@ -332,6 +341,7 @@ async function handleSubmit() {
   } catch (error) {
     showToast('订单创建失败，请重试')
   } finally {
+    isSubmitting.value = false
     closeToast()
   }
 }

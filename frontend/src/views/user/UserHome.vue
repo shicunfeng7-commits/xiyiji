@@ -54,10 +54,13 @@
       <button class="cta-btn" @click="goCreate">立即预约清洗</button>
     </div>
   </div>
+  
+  <BottomNav />
 </template>
 
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
+import BottomNav from '../../components/BottomNav.vue'
 
 const router = useRouter()
 

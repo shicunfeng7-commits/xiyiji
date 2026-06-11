@@ -72,7 +72,14 @@ async function handleLogin() {
     const { token, user } = res.data.data
     setToken(token)
     setUserInfo(user)
-    router.replace('/user/home')
+    
+    if (user.role === 'admin') {
+      router.replace('/admin/dashboard')
+    } else if (user.role === 'employee') {
+      router.replace('/user/home')
+    } else {
+      router.replace('/user/home')
+    }
   } catch {
     showToast('登录失败，请稍后重试')
   } finally {
