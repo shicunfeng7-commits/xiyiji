@@ -39,8 +39,21 @@ public class UserController {
      * 用户登录/注册（按手机号）
      */
     @PostMapping("/login")
-    public R<User> login(@RequestParam String phone) {
-        return R.success(userService.loginOrRegister(phone));
+    public R<java.util.Map<String, Object>> login(@RequestBody java.util.Map<String, String> body) {
+        String phone = body.get("phone");
+        User user = userService.loginOrRegister(phone);
+        String token = com.xiyiji.common.util.JwtTokenUtil.generateToken(user.getId(), user.getPhone());
+        
+        java.util.Map<String, Object> userInfo = new java.util.HashMap<>();
+        userInfo.put("id", user.getId());
+        userInfo.put("phone", user.getPhone());
+        userInfo.put("nickname", user.getNickname());
+        userInfo.put("role", user.getRole());
+        
+        java.util.Map<String, Object> result = new java.util.HashMap<>();
+        result.put("token", token);
+        result.put("user", userInfo);
+        return R.success(result);
     }
 
     /**
@@ -103,9 +116,12 @@ public class UserController {
      * 申请成为员工
      */
     @PostMapping("/apply-employee")
-    public R<Void> applyEmployee(@RequestParam String name) {
+    public R<Void> applyEmployee(@RequestBody java.util.Map<String, String> body) {
         Long userId = (Long) request.getAttribute("userId");
-        userService.applyEmployee(userId, name);
+        String name = body.get("name");
+        String phone = body.get("phone");
+        String major = body.get("major");
+        userService.applyEmployee(userId, name, phone, major);
         return R.success(null);
     }
 

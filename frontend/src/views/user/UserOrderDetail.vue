@@ -1,187 +1,539 @@
 <template>
   <div class="order-detail">
-    <div class="status-timeline">
-      <div class="timeline-item" v-for="(step, i) in timeline" :key="i" :class="{ active: step.active }">
-        <div class="timeline-dot" :class="{ done: step.done }">
-          <van-icon v-if="step.done" name="success" size="12" color="white" />
-        </div>
-        <div class="timeline-content">
-          <div class="tl-title">{{ step.title }}</div>
-          <div class="tl-time">{{ step.time }}</div>
+    <!-- 时间轴进度 -->
+    <div class="timeline-section">
+      <div class="timeline-title">订单进度</div>
+      <div class="timeline">
+        <div
+          v-for="(step, index) in timelineSteps"
+          :key="step.status"
+          class="timeline-item"
+          :class="{
+            completed: step.status <= currentStatus,
+            current: step.status === currentStatus,
+            pending: step.status > currentStatus,
+          }"
+        >
+          <div class="timeline-node">
+            <van-icon v-if="step.status <= currentStatus" :name="step.icon" size="18" />
+            <span v-else>{{ index + 1 }}</span>
+          </div>
+          <div class="timeline-content">
+            <div class="timeline-label">{{ step.label }}</div>
+            <div class="timeline-time">{{ getStepTime(step.status) }}</div>
+          </div>
+          <div v-if="index < timelineSteps.length - 1" class="timeline-line"></div>
         </div>
       </div>
     </div>
 
-    <div class="detail-card">
-      <div class="detail-row">
-        <span class="label">订单编号</span>
-        <span class="value">WP202606150001</span>
+    <!-- 订单信息 -->
+    <div class="info-card">
+      <div class="card-header">
+        <span class="order-no">订单号：{{ order?.orderNo }}</span>
+        <span class="order-status" :class="getStatusClass(order?.status)">{{ getStatusText(order?.status) }}</span>
       </div>
-      <div class="detail-row">
-        <span class="label">服务地址</span>
-        <span class="value">食宿楼 · 3栋 · 301</span>
+      
+      <div class="info-grid">
+        <div class="info-item">
+          <van-icon name="location-o" size="16" color="#86868B" />
+          <span>{{ order?.buildingName }} · {{ order?.roomNo }}</span>
+        </div>
+        <div class="info-item">
+          <van-icon name="clock-o" size="16" color="#86868B" />
+          <span>{{ order?.serviceDate }} {{ order?.startTime }} ~ {{ order?.endTime }}</span>
+        </div>
+        <div class="info-item">
+          <van-icon name="user-o" size="16" color="#86868B" />
+          <span>{{ order?.userName }}</span>
+        </div>
+        <div class="info-item">
+          <van-icon name="phone-o" size="16" color="#86868B" />
+          <span>{{ order?.phone }}</span>
+        </div>
       </div>
-      <div class="detail-row">
-        <span class="label">预约时间</span>
-        <span class="value">2026-06-15 10:00 ~ 12:00</span>
+
+      <div class="amount-row">
+        <span class="amount-label">服务费用</span>
+        <span class="amount-value">¥{{ order?.amount }}</span>
       </div>
-      <div class="detail-row">
-        <span class="label">订单状态</span>
-        <span class="value status-text">待支付</span>
-      </div>
-      <div class="detail-row total">
-        <span class="label">支付金额</span>
-        <span class="value highlight">¥29.90</span>
+
+      <div v-if="order?.remark" class="remark-row">
+        <span class="remark-label">备注</span>
+        <span class="remark-value">{{ order?.remark }}</span>
       </div>
     </div>
 
-    <button class="back-btn" @click="router.push('/user/orders')">返回列表</button>
+    <!-- 操作日志 -->
+    <div class="logs-section">
+      <div class="section-title">操作记录</div>
+      <div v-if="logs.length === 0" class="empty-logs">
+        <van-icon name="file-text-o" size="32" color="#C7C7CC" />
+        <p>暂无操作记录</p>
+      </div>
+      <div v-else class="logs-list">
+        <div v-for="log in logs" :key="log.id" class="log-item">
+          <div class="log-time">{{ formatTime(log.createTime) }}</div>
+          <div class="log-content">
+            <span class="log-operator">{{ getOperatorType(log.operatorType) }}</span>
+            <span class="log-action">{{ getStatusChangeText(log.fromStatus, log.toStatus) }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 底部操作按钮 -->
+    <div class="bottom-actions">
+      <button v-if="order?.status === 0" class="action-btn cancel" @click="handleCancel">取消订单</button>
+      <button v-if="order?.status === 0" class="action-btn pay" @click="goPay">去支付</button>
+      <button v-if="order?.status === 3" class="action-btn complete" @click="goHome">完成</button>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted, computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { showToast, showLoading, hideLoading } from 'vant'
+import { get, post } from '../../utils/request'
+
+const route = useRoute()
 const router = useRouter()
 
-const timeline = ref([
-  { title: '已下单', time: '2026-06-15 09:30', done: true, active: false },
-  { title: '已支付', time: '等待支付中...', done: false, active: false },
-  { title: '服务中', time: '', done: false, active: false },
-  { title: '已完成', time: '', done: false, active: true },
-])
+const order = ref<any>(null)
+const logs = ref<any[]>([])
+const loading = ref(true)
+
+const timelineSteps = [
+  { status: 0, label: '订单创建', icon: 'circle-o' },
+  { status: 1, label: '已支付', icon: 'check-circle-o' },
+  { status: 2, label: '服务中', icon: 'clock-o' },
+  { status: 3, label: '已完成', icon: 'success' },
+]
+
+const currentStatus = computed(() => order.value?.status ?? 0)
+
+const statusMap: Record<number, { text: string; class: string }> = {
+  0: { text: '未支付', class: 'status-unpaid' },
+  1: { text: '待服务', class: 'status-paid' },
+  2: { text: '服务中', class: 'status-progress' },
+  3: { text: '已完成', class: 'status-completed' },
+  4: { text: '已取消', class: 'status-cancelled' },
+}
+
+const statusTextMap: Record<number, string> = {
+  0: '未支付',
+  1: '已支付',
+  2: '服务中',
+  3: '已完成',
+  4: '已取消',
+}
+
+function getStatusText(status?: number): string {
+  return status !== undefined ? statusMap[status]?.text || '未知' : '未知'
+}
+
+function getStatusClass(status?: number): string {
+  return status !== undefined ? statusMap[status]?.class || 'status-default' : 'status-default'
+}
+
+function getStepTime(status: number): string {
+  if (status === 0) return order.value?.createTime?.substring(0, 16) || ''
+  if (status === 1) return order.value?.payTime?.substring(0, 16) || ''
+  if (status === 3) return order.value?.completeTime?.substring(0, 16) || ''
+  return ''
+}
+
+function formatTime(timeStr?: string): string {
+  if (!timeStr) return ''
+  return timeStr.substring(0, 19).replace('T', ' ')
+}
+
+function getOperatorType(type?: number): string {
+  const types: Record<number, string> = {
+    0: '用户',
+    1: '管理员',
+    2: '员工',
+  }
+  return types[type ?? 0] || '系统'
+}
+
+function getStatusChangeText(from?: number, to?: number): string {
+  if (from === null || from === undefined) {
+    return `创建订单`
+  }
+  return `${statusTextMap[from]} → ${statusTextMap[to ?? 0]}`
+}
+
+async function loadOrder() {
+  loading.value = true
+  showLoading({ message: '加载中...' })
+  try {
+    const orderId = route.query.id
+    const res = await get<{ code: number; data: any }>(`/api/user/order/detail/${orderId}`)
+    if (res.data.code === 200) {
+      order.value = res.data.data
+    }
+  } catch (error) {
+    showToast('加载订单失败')
+  } finally {
+    loading.value = false
+    hideLoading()
+  }
+}
+
+async function loadLogs() {
+  try {
+    const orderId = route.query.id
+    const res = await get<{ code: number; data: any[] }>(`/api/admin/order/logs/${orderId}`)
+    if (res.data.code === 200) {
+      logs.value = res.data.data
+    }
+  } catch (error) {
+    console.log('加载日志失败')
+  }
+}
+
+async function handleCancel() {
+  const orderId = route.query.id
+  try {
+    const res = await post<{ code: number }>(`/api/user/order/cancel/${orderId}`)
+    if (res.data.code === 200) {
+      showToast('取消成功')
+      setTimeout(() => {
+        router.push('/user/orders')
+      }, 1500)
+    }
+  } catch (error) {
+    showToast('取消失败')
+  }
+}
+
+function goPay() {
+  router.push(`/user/order/pay?id=${route.query.id}`)
+}
+
+function goHome() {
+  router.push('/user/home')
+}
+
+onMounted(() => {
+  loadOrder()
+  loadLogs()
+})
 </script>
 
 <style scoped>
 .order-detail {
   padding: 16px;
-  padding-bottom: 100px;
+  padding-bottom: 120px;
+  background: #F5F5F7;
+  min-height: 100vh;
 }
 
-.status-timeline {
+/* ====== 时间轴 ====== */
+.timeline-section {
   background: white;
   border-radius: 16px;
   padding: 20px;
-  margin-bottom: 12px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  margin-bottom: 16px;
+}
+
+.timeline-title {
+  font-size: 17px;
+  font-weight: 600;
+  color: #1D1D1F;
+  margin-bottom: 20px;
+}
+
+.timeline {
+  position: relative;
+  padding-left: 24px;
 }
 
 .timeline-item {
-  display: flex;
-  gap: 12px;
   position: relative;
-  padding-bottom: 20px;
+  padding-bottom: 24px;
 }
 
 .timeline-item:last-child {
   padding-bottom: 0;
 }
 
-.timeline-item::before {
-  content: '';
+.timeline-node {
   position: absolute;
-  left: 11px;
-  top: 24px;
-  width: 2px;
-  height: calc(100% - 24px);
-  background: #E8E8ED;
-}
-
-.timeline-item:last-child::before {
-  display: none;
-}
-
-.timeline-item.active::before {
-  background: #E8E8ED;
-}
-
-.timeline-dot {
-  width: 24px;
-  height: 24px;
+  left: -24px;
+  top: 2px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
-  background: #E8E8ED;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
-  margin-top: 2px;
-}
-
-.timeline-dot.done {
-  background: #34C759;
-}
-
-.timeline-item.active .timeline-dot {
-  background: #2B95FF;
-  box-shadow: 0 0 0 4px rgba(43,149,255,0.15);
-}
-
-.tl-title {
   font-size: 14px;
-  font-weight: 500;
-  color: #C7C7CC;
-}
-
-.timeline-item.active .tl-title,
-.timeline-item .timeline-dot.done ~ .timeline-content .tl-title {
-  color: #1D1D1F;
   font-weight: 600;
 }
 
-.tl-time {
-  font-size: 12px;
+.timeline-item.pending .timeline-node {
+  background: #F5F5F7;
   color: #C7C7CC;
-  margin-top: 2px;
 }
 
-.detail-card {
+.timeline-item.completed:not(.current) .timeline-node {
+  background: #34C759;
+  color: white;
+}
+
+.timeline-item.current .timeline-node {
+  background: #2B95FF;
+  color: white;
+  box-shadow: 0 0 0 4px rgba(43, 149, 255, 0.15);
+}
+
+.timeline-content {
+  padding-left: 12px;
+}
+
+.timeline-label {
+  font-size: 15px;
+  font-weight: 500;
+  color: #1D1D1F;
+  margin-bottom: 4px;
+}
+
+.timeline-time {
+  font-size: 12px;
+  color: #86868B;
+}
+
+.timeline-line {
+  position: absolute;
+  left: -12px;
+  top: 36px;
+  width: 2px;
+  height: calc(100% - 36px);
+  background: #F5F5F7;
+}
+
+.timeline-item.completed:not(.current) .timeline-line {
+  background: #34C759;
+}
+
+.timeline-item.current .timeline-line {
+  background: #2B95FF;
+}
+
+/* ====== 订单信息 ====== */
+.info-card {
   background: white;
   border-radius: 16px;
   padding: 16px;
-  margin-bottom: 24px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  margin-bottom: 16px;
 }
 
-.detail-row {
+.card-header {
   display: flex;
   justify-content: space-between;
-  padding: 8px 0;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #F5F5F7;
 }
 
-.detail-row + .detail-row {
-  border-top: 1px solid #F5F5F7;
-}
-
-.detail-row .label {
+.order-no {
   font-size: 14px;
   color: #86868B;
 }
 
-.detail-row .value {
-  font-size: 14px;
-  color: #1D1D1F;
-  font-weight: 500;
+.order-status {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 10px;
 }
 
-.detail-row .value.highlight {
-  color: #2B95FF;
-  font-size: 18px;
-  font-weight: 700;
-}
-
-.detail-row .value.status-text {
+.status-unpaid {
+  background: rgba(255,149,0,0.1);
   color: #FF9500;
 }
 
-.back-btn {
-  width: 100%;
-  padding: 14px;
-  background: #F5F5F7;
+.status-paid {
+  background: rgba(43,149,255,0.1);
   color: #2B95FF;
+}
+
+.status-progress {
+  background: rgba(142,142,147,0.1);
+  color: #8E8E93;
+}
+
+.status-completed {
+  background: rgba(52,199,89,0.1);
+  color: #34C759;
+}
+
+.status-cancelled {
+  background: rgba(142,142,147,0.1);
+  color: #8E8E93;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #1D1D1F;
+}
+
+.amount-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid #F5F5F7;
+}
+
+.amount-label {
+  font-size: 14px;
+  color: #86868B;
+}
+
+.amount-value {
+  font-size: 22px;
+  font-weight: 700;
+  color: #2B95FF;
+}
+
+.remark-row {
+  display: flex;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 12px;
+  background: #F9F9FB;
+  border-radius: 12px;
+}
+
+.remark-label {
+  font-size: 13px;
+  color: #86868B;
+  flex-shrink: 0;
+}
+
+.remark-value {
+  font-size: 14px;
+  color: #1D1D1F;
+}
+
+/* ====== 操作日志 ====== */
+.logs-section {
+  background: white;
+  border-radius: 16px;
+  padding: 16px;
+}
+
+.section-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1D1D1F;
+  margin-bottom: 16px;
+}
+
+.empty-logs {
+  text-align: center;
+  padding: 32px 0;
+  color: #C7C7CC;
+}
+
+.empty-logs p {
+  margin-top: 8px;
+  font-size: 14px;
+}
+
+.logs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.log-item {
+  display: flex;
+  gap: 16px;
+  padding: 12px;
+  background: #F9F9FB;
+  border-radius: 12px;
+}
+
+.log-time {
+  font-size: 12px;
+  color: #86868B;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.log-content {
+  font-size: 14px;
+  color: #1D1D1F;
+}
+
+.log-operator {
+  font-weight: 600;
+  margin-right: 8px;
+}
+
+.log-action {
+  color: #86868B;
+}
+
+/* ====== 底部操作按钮 ====== */
+.bottom-actions {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  gap: 12px;
+  padding: 16px;
+  padding-bottom: calc(16px + env(safe-area-inset-bottom));
+  background: white;
+  box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+}
+
+.action-btn {
+  flex: 1;
+  padding: 14px;
   border: none;
   border-radius: 14px;
   font-size: 16px;
   font-weight: 600;
   cursor: pointer;
+  transition: all 0.2s;
+}
+
+.action-btn.cancel {
+  background: #F5F5F7;
+  color: #86868B;
+}
+
+.action-btn.pay {
+  background: #2B95FF;
+  color: white;
+  box-shadow: 0 4px 14px rgba(43,149,255,0.3);
+}
+
+.action-btn.complete {
+  background: #34C759;
+  color: white;
+  box-shadow: 0 4px 14px rgba(52,199,89,0.3);
+}
+
+.action-btn:active {
+  transform: scale(0.98);
 }
 </style>

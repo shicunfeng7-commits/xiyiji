@@ -3,27 +3,31 @@
     <div class="order-list">
       <div class="order-card" v-for="order in orders" :key="order.id">
         <div class="order-top">
-          <span class="order-no">订单 {{ order.no }}</span>
+          <span class="order-no">订单 {{ order.orderNo }}</span>
           <span class="order-status" :class="order.statusClass">{{ order.statusText }}</span>
         </div>
         <div class="order-info">
           <div class="info-row">
             <van-icon name="location-o" size="14" color="#86868B" />
-            <span>{{ order.building }} · {{ order.room }}</span>
+            <span>{{ order.buildingName }} · {{ order.roomNo }}</span>
           </div>
           <div class="info-row">
             <van-icon name="clock-o" size="14" color="#86868B" />
-            <span>{{ order.time }}</span>
+            <span>{{ order.serviceDate }} {{ order.startTime }} ~ {{ order.endTime }}</span>
           </div>
         </div>
         <div class="order-bottom">
           <span class="order-amount">¥{{ order.amount }}</span>
-          <button v-if="order.status === 'unpaid'" class="pay-btn" @click="router.push('/user/order/pay')">去支付</button>
-          <button v-else class="detail-btn" @click="router.push('/user/order/detail')">查看详情</button>
+          <button v-if="order.status === 0" class="pay-btn" @click="goPay(order.id)">去支付</button>
+          <button v-else class="detail-btn" @click="goDetail(order.id)">查看详情</button>
         </div>
       </div>
 
-      <div v-if="orders.length === 0" class="empty-state">
+      <div v-if="loading" class="loading-state">
+        <van-loading size="24px" />
+      </div>
+
+      <div v-if="!loading && orders.length === 0" class="empty-state">
         <van-icon name="records-o" size="48" color="#C7C7CC" />
         <p>暂无订单</p>
         <button class="order-now-btn" @click="router.push('/user/order/create')">去预约</button>
@@ -33,51 +37,86 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { showToast, showLoading, hideLoading } from 'vant'
+import { get } from '../../utils/request'
 
 const router = useRouter()
+const orders = ref<any[]>([])
+const loading = ref(true)
 
-const orders = ref([
-  {
-    id: 1,
-    no: 'WP202606150001',
-    building: '食宿楼 · 3栋',
-    room: '301',
-    time: '2026-06-15 10:00 ~ 12:00',
-    amount: '29.90',
-    status: 'unpaid',
-    statusText: '未支付',
-    statusClass: 'status-unpaid',
-  },
-  {
-    id: 2,
-    no: 'WP202606140002',
-    building: '学生宿舍 · 1栋',
-    room: '506',
-    time: '2026-06-14 14:00 ~ 16:00',
-    amount: '29.90',
-    status: 'paid',
-    statusText: '待服务',
-    statusClass: 'status-paid',
-  },
-  {
-    id: 3,
-    no: 'WP202606120003',
-    building: '教师公寓 · A栋',
-    room: '208',
-    time: '2026-06-12 09:00 ~ 11:00',
-    amount: '29.90',
-    status: 'completed',
-    statusText: '已完成',
-    statusClass: 'status-completed',
-  },
-])
+const statusMap: Record<number, { text: string; class: string }> = {
+  0: { text: '未支付', class: 'status-unpaid' },
+  1: { text: '待服务', class: 'status-paid' },
+  2: { text: '服务中', class: 'status-progress' },
+  3: { text: '已完成', class: 'status-completed' },
+  4: { text: '已取消', class: 'status-cancelled' },
+}
+
+interface Order {
+  id: number
+  orderNo: string
+  buildingName: string
+  roomNo: string
+  serviceDate: string
+  startTime: string
+  endTime: string
+  amount: string | number
+  status: number
+  statusText: string
+  statusClass: string
+}
+
+async function loadOrders() {
+  loading.value = true
+  showLoading({ message: '加载中...' })
+  try {
+    const res = await get<{ code: number; data: any[] }>('/api/user/order/list')
+    if (res.data.code === 200) {
+      orders.value = res.data.data.map((item: any) => ({
+        id: item.id,
+        orderNo: item.orderNo,
+        buildingName: item.buildingName,
+        roomNo: item.roomNo,
+        serviceDate: item.serviceDate,
+        startTime: item.startTime,
+        endTime: item.endTime,
+        amount: item.amount,
+        status: item.status,
+        statusText: statusMap[item.status]?.text || '未知',
+        statusClass: statusMap[item.status]?.class || 'status-default',
+      }))
+    }
+  } catch (error) {
+    showToast('加载订单失败')
+  } finally {
+    loading.value = false
+    hideLoading()
+  }
+}
+
+function goPay(orderId: number) {
+  router.push(`/user/order/pay?id=${orderId}`)
+}
+
+function goDetail(orderId: number) {
+  router.push(`/user/order/detail?id=${orderId}`)
+}
+
+onMounted(() => {
+  loadOrders()
+})
 </script>
 
 <style scoped>
 .user-orders {
   padding: 12px 16px 100px;
+}
+
+.loading-state {
+  text-align: center;
+  padding: 40px 0;
 }
 
 .order-card {
@@ -121,6 +160,21 @@ const orders = ref([
 .status-completed {
   background: rgba(52,199,89,0.1);
   color: #34C759;
+}
+
+.status-progress {
+  background: rgba(142,142,147,0.1);
+  color: #8E8E93;
+}
+
+.status-cancelled {
+  background: rgba(142,142,147,0.1);
+  color: #8E8E93;
+}
+
+.status-default {
+  background: rgba(142,142,147,0.1);
+  color: #8E8E93;
 }
 
 .order-info {

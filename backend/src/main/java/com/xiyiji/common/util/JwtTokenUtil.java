@@ -12,7 +12,7 @@ import java.util.Date;
 
 public class JwtTokenUtil {
 
-    private static final String SECRET_KEY = "WashProSecretKey2024!@#$%";
+    private static final String SECRET_KEY = "WashProSecretKey2024!@#$%^&*()_+QWERTYUIOP";
     private static final long EXPIRATION = 604800000L; // 7天
 
     private static SecretKey getKey() {

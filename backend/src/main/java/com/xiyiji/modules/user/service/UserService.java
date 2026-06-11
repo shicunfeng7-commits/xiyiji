@@ -6,6 +6,6 @@ import com.xiyiji.modules.user.entity.User;
 
 public interface UserService extends IService<User> {
     User loginOrRegister(String phone);
-    void applyEmployee(Long userId, String name);
+    void applyEmployee(Long userId, String name, String phone, String major);
     EmployeeApplication getApplyStatus(Long userId);
 }

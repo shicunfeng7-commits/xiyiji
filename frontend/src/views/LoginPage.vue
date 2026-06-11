@@ -34,6 +34,10 @@
       </button>
     </div>
 
+    <button class="admin-login-btn" @click="goAdminLogin">
+      管理员登录
+    </button>
+
     <div class="footer-note">
       登录即表示同意《服务条款》和《隐私政策》
     </div>
@@ -64,15 +68,20 @@ async function handleLogin() {
 
   loading.value = true
   try {
-    const res = await post<{ token: string; userInfo: object }>('/api/auth/login', { phone: phone.value })
-    setToken(res.data.token)
-    setUserInfo(res.data.userInfo)
+    const res = await post<any>('/api/auth/login', { phone: phone.value })
+    const { token, user } = res.data.data
+    setToken(token)
+    setUserInfo(user)
     router.replace('/user/home')
   } catch {
     showToast('登录失败，请稍后重试')
   } finally {
     loading.value = false
   }
+}
+
+function goAdminLogin() {
+  router.push('/admin/login')
 }
 </script>
 
@@ -202,6 +211,25 @@ async function handleLogin() {
 .login-btn.active:active {
   transform: scale(0.97);
   box-shadow: 0 2px 8px rgba(43, 149, 255, 0.2);
+}
+
+.admin-login-btn {
+  width: 100%;
+  max-width: 360px;
+  height: 48px;
+  border: 1px solid rgba(43, 149, 255, 0.3);
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 500;
+  color: #2B95FF;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 0.02em;
+}
+
+.admin-login-btn:active {
+  background: rgba(43, 149, 255, 0.05);
 }
 
 .footer-note {

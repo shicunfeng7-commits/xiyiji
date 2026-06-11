@@ -21,7 +21,8 @@ public class AuthController {
     private UserMapper userMapper;
 
     @PostMapping("/login")
-    public R<Map<String, Object>> login(@RequestParam String phone) {
+    public R<Map<String, Object>> login(@RequestBody Map<String, String> body) {
+        String phone = body.get("phone");
         return R.success(authService.login(phone));
     }
 

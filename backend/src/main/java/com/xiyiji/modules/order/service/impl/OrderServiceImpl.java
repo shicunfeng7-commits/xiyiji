@@ -27,6 +27,9 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     @Resource
     private EmployeeService employeeService;
 
+    @Resource
+    private com.xiyiji.modules.order.service.OrderStatusLogService orderStatusLogService;
+
     @Override
     public String generateOrderNo() {
         LocalDate now = LocalDate.now();
@@ -48,28 +51,51 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     @Override
     @Transactional
     public boolean confirmPay(Long orderId, Long adminId) {
+        Order order = getById(orderId);
+        if (order == null || order.getStatus() != OrderStatus.UNPAID) {
+            return false;
+        }
+        int fromStatus = order.getStatus();
         LambdaUpdateWrapper<Order> wrapper = new LambdaUpdateWrapper<>();
         wrapper.eq(Order::getId, orderId)
                .eq(Order::getStatus, OrderStatus.UNPAID)
                .set(Order::getStatus, OrderStatus.PAID)
                .set(Order::getPayTime, LocalDateTime.now());
-        return update(wrapper);
+        boolean result = update(wrapper);
+        if (result) {
+            orderStatusLogService.log(orderId, fromStatus, OrderStatus.PAID, 1, adminId);
+        }
+        return result;
     }
 
     @Override
     @Transactional
     public boolean revertPay(Long orderId) {
+        Order order = getById(orderId);
+        if (order == null || order.getStatus() != OrderStatus.PAID) {
+            return false;
+        }
+        int fromStatus = order.getStatus();
         LambdaUpdateWrapper<Order> wrapper = new LambdaUpdateWrapper<>();
         wrapper.eq(Order::getId, orderId)
                .eq(Order::getStatus, OrderStatus.PAID)
                .set(Order::getStatus, OrderStatus.UNPAID)
                .set(Order::getPayTime, null);
-        return update(wrapper);
+        boolean result = update(wrapper);
+        if (result) {
+            orderStatusLogService.log(orderId, fromStatus, OrderStatus.UNPAID, 1, null);
+        }
+        return result;
     }
 
     @Override
     @Transactional
     public boolean grabOrder(Long orderId, Long employeeId) {
+        Order order = getById(orderId);
+        if (order == null || order.getStatus() != OrderStatus.PAID || order.getEmployeeId() != null) {
+            return false;
+        }
+        int fromStatus = order.getStatus();
         // 乐观锁：只有 PAID 状态且无 employee_id 的才能抢
         LambdaUpdateWrapper<Order> wrapper = new LambdaUpdateWrapper<>();
         wrapper.eq(Order::getId, orderId)
@@ -78,6 +104,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
                .set(Order::getEmployeeId, employeeId);
         boolean updated = update(wrapper);
         if (updated) {
+            orderStatusLogService.log(orderId, fromStatus, OrderStatus.IN_PROGRESS, 2, employeeId);
             // 更新员工状态为服务中
             employeeService.update(
                     new LambdaUpdateWrapper<Employee>()
@@ -91,17 +118,31 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     @Override
     @Transactional
     public boolean startOrder(Long orderId, Long employeeId) {
+        Order order = getById(orderId);
+        if (order == null || !employeeId.equals(order.getEmployeeId()) || order.getStatus() != OrderStatus.PAID) {
+            return false;
+        }
+        int fromStatus = order.getStatus();
         LambdaUpdateWrapper<Order> wrapper = new LambdaUpdateWrapper<>();
         wrapper.eq(Order::getId, orderId)
                .eq(Order::getEmployeeId, employeeId)
                .eq(Order::getStatus, OrderStatus.PAID)
                .set(Order::getStatus, OrderStatus.IN_PROGRESS);
-        return update(wrapper);
+        boolean result = update(wrapper);
+        if (result) {
+            orderStatusLogService.log(orderId, fromStatus, OrderStatus.IN_PROGRESS, 2, employeeId);
+        }
+        return result;
     }
 
     @Override
     @Transactional
     public boolean completeOrder(Long orderId, Long employeeId) {
+        Order order = getById(orderId);
+        if (order == null || !employeeId.equals(order.getEmployeeId()) || order.getStatus() != OrderStatus.IN_PROGRESS) {
+            return false;
+        }
+        int fromStatus = order.getStatus();
         LambdaUpdateWrapper<Order> wrapper = new LambdaUpdateWrapper<>();
         wrapper.eq(Order::getId, orderId)
                .eq(Order::getEmployeeId, employeeId)
@@ -110,6 +151,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
                .set(Order::getCompleteTime, LocalDateTime.now());
         boolean updated = update(wrapper);
         if (updated) {
+            orderStatusLogService.log(orderId, fromStatus, OrderStatus.COMPLETED, 2, employeeId);
             employeeService.update(
                     new LambdaUpdateWrapper<Employee>()
                             .eq(Employee::getId, employeeId)
@@ -165,11 +207,20 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     @Override
     @Transactional
     public boolean cancelOrder(Long id, Long userId) {
+        Order order = getById(id);
+        if (order == null || !userId.equals(order.getUserId()) || order.getStatus() != OrderStatus.UNPAID) {
+            return false;
+        }
+        int fromStatus = order.getStatus();
         LambdaUpdateWrapper<Order> wrapper = new LambdaUpdateWrapper<>();
         wrapper.eq(Order::getId, id)
                .eq(Order::getUserId, userId)
                .eq(Order::getStatus, OrderStatus.UNPAID)
                .set(Order::getStatus, OrderStatus.CANCELLED);
-        return update(wrapper);
+        boolean result = update(wrapper);
+        if (result) {
+            orderStatusLogService.log(id, fromStatus, OrderStatus.CANCELLED, 0, userId);
+        }
+        return result;
     }
 }
