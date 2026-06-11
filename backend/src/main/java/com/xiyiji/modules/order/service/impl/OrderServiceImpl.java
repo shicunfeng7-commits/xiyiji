@@ -226,10 +226,13 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     }
 
     @Override
-    public List<Order> getAllOrders(Integer status, String sort, String order) {
+    public List<Order> getAllOrders(Integer status, String sort, String order, String keyword) {
         LambdaQueryWrapper<Order> wrapper = new LambdaQueryWrapper<>();
         if (status != null) {
             wrapper.eq(Order::getStatus, status);
+        }
+        if (keyword != null && !keyword.isEmpty()) {
+            wrapper.and(w -> w.like(Order::getOrderNo, keyword).or().like(Order::getUserName, keyword));
         }
         
         boolean isDesc = "desc".equalsIgnoreCase(order);

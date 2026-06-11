@@ -77,6 +77,8 @@ public class UserController {
         try {
             Long userId = (Long) request.getAttribute("userId");
             order.setUserId(userId);
+            com.xiyiji.modules.user.entity.User u = userService.getById(userId);
+            if (u != null) order.setUserName(u.getPhone());
             Order created = orderService.createOrder(order);
             
             // 推送新订单通知给员工端
@@ -176,7 +178,8 @@ public class UserController {
         String name = body.get("name");
         String phone = body.get("phone");
         String major = body.get("major");
-        userService.applyEmployee(userId, name, phone, major);
+        String grade = body.get("grade");
+        userService.applyEmployee(userId, name, phone, major, grade);
         return R.success(null);
     }
 
@@ -187,5 +190,46 @@ public class UserController {
     public R<EmployeeApplication> getApplyStatus() {
         Long userId = (Long) request.getAttribute("userId");
         return R.success(userService.getApplyStatus(userId));
+    }
+
+    /**
+     * 更新个人信息
+     */
+    @PutMapping("/profile")
+    public R<Void> updateProfile(@RequestBody java.util.Map<String, String> body) {
+        Long userId = (Long) request.getAttribute("userId");
+        com.xiyiji.modules.user.entity.User user = userService.getById(userId);
+        if (user == null) return R.error("用户不存在");
+        if (body.containsKey("nickname")) user.setNickname(body.get("nickname"));
+        if (body.containsKey("avatar")) user.setAvatar(body.get("avatar"));
+        userService.updateById(user);
+        return R.success();
+    }
+
+    /**
+     * 获取未读通知（员工申请审核结果）
+     */
+    @GetMapping("/notifications")
+    public R<java.util.Map<String, Object>> getNotifications() {
+        Long userId = (Long) request.getAttribute("userId");
+        com.xiyiji.modules.employee.entity.EmployeeApplication app = userService.getApplyStatus(userId);
+        java.util.Map<String, Object> result = new java.util.HashMap<>();
+        if (app != null) {
+            if (app.getStatus() == 1) {
+                result.put("type", "approved");
+                result.put("message", "您的员工申请已通过");
+            } else if (app.getStatus() == 2) {
+                result.put("type", "rejected");
+                result.put("message", "您的员工申请已被拒绝：" + (app.getRemark() != null ? app.getRemark() : ""));
+                // 用户查看后标记为已读（删除申请记录或标记）
+            } else {
+                result.put("type", "pending");
+                result.put("message", "申请审核中");
+            }
+        } else {
+            result.put("type", "none");
+            result.put("message", "");
+        }
+        return R.success(result);
     }
 }

@@ -26,8 +26,11 @@
         </div>
         <div class="order-bottom">
           <span class="order-amount">¥{{ order.amount }}</span>
-          <button v-if="order.status === 0" class="pay-btn" @click="goPay(order.id)">去支付</button>
-          <button v-else class="detail-btn" @click="goDetail(order.id)">查看详情</button>
+          <div class="order-actions">
+            <button v-if="order.status === 0" class="cancel-btn" @click="cancelOrder(order)">取消</button>
+            <button v-if="order.status === 0" class="pay-btn" @click="goPay(order.id)">去支付</button>
+            <button v-if="order.status !== 0" class="detail-btn" @click="goDetail(order.id)">查看详情</button>
+          </div>
         </div>
       </div>
 
@@ -49,7 +52,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { showToast, showLoadingToast, closeToast } from 'vant'
-import { get } from '../../utils/request'
+import { get, post } from '../../utils/request'
 
 const router = useRouter()
 const orders = ref<any[]>([])
@@ -99,6 +102,18 @@ function goPay(orderId: number) {
 
 function goDetail(orderId: number) {
   router.push(`/user/order/detail?id=${orderId}`)
+}
+
+async function cancelOrder(order: any) {
+  try {
+    await post(`/api/user/order/cancel/${order.id}`)
+    order.status = 4
+    order.statusText = '已取消'
+    order.statusClass = 'status-cancelled'
+    showToast('订单已取消')
+  } catch {
+    showToast('取消失败')
+  }
 }
 
 onMounted(() => {
@@ -213,6 +228,21 @@ onMounted(() => {
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
+}
+
+.cancel-btn {
+  padding: 6px 16px;
+  background: white;
+  color: #FF3B30;
+  border: 1.5px solid rgba(255,59,48,0.3);
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.cancel-btn:active {
+  background: rgba(255,59,48,0.06);
 }
 
 .pay-btn:active {

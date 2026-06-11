@@ -1,222 +1,168 @@
 <template>
   <div class="order-pay">
-    <div class="success-animation">
+    <div class="success-hero">
       <div class="check-circle">
-        <van-icon name="passed" size="40" color="white" />
+        <van-icon name="passed" size="36" color="white" />
+      </div>
+      <h2 class="pay-title">下单成功</h2>
+      <p class="pay-subtitle">添加管理员微信完成支付</p>
+    </div>
+
+    <!-- 订单号（核心） -->
+    <div class="order-no-card">
+      <p class="no-label">订单号</p>
+      <h1 class="no-value">{{ order?.orderNo || '—' }}</h1>
+      <p class="no-hint">请将此订单号发送给管理员核对</p>
+      <button class="copy-btn" @click="copyOrderNo">
+        <van-icon name="copy-o" size="16" />
+        复制订单号
+      </button>
+    </div>
+
+    <!-- 订单详情 -->
+    <div class="info-card" v-if="order">
+      <div class="info-row">
+        <span class="info-label">服务地址</span>
+        <span class="info-value">{{ order.buildingName }} · {{ order.roomNo }}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">预约时间</span>
+        <span class="info-value">{{ order.serviceDate }} {{ order.startTime }} ~ {{ order.endTime }}</span>
+      </div>
+      <div class="info-row total">
+        <span class="info-label">支付金额</span>
+        <span class="info-value price">¥{{ order.amount }}</span>
       </div>
     </div>
 
-    <h2 class="pay-title">订单提交成功！</h2>
-    <p class="pay-subtitle">请扫描下方管理员微信二维码完成支付</p>
-
-    <div class="order-summary">
-      <div class="summary-row">
-        <span class="label">订单编号</span>
-        <span class="value">WP202606150001</span>
-      </div>
-      <div class="summary-row">
-        <span class="label">服务地址</span>
-        <span class="value">食宿楼 · 3栋 · 301</span>
-      </div>
-      <div class="summary-row">
-        <span class="label">预约时间</span>
-        <span class="value">2026-06-15 10:00 ~ 12:00</span>
-      </div>
-      <div class="summary-row total">
-        <span class="label">支付金额</span>
-        <span class="value highlight">¥29.90</span>
-      </div>
-    </div>
-
+    <!-- 二维码 -->
     <div class="qrcode-card">
       <div class="qrcode-header">
         <van-icon name="wechat" size="20" color="#07C160" />
-        <span>管理员微信</span>
+        <span>管理员微信收款码</span>
       </div>
       <div class="qrcode-placeholder">
-        <div class="mock-qrcode">
-          <svg width="140" height="140" viewBox="0 0 140 140">
-            <rect width="140" height="140" fill="white" rx="8"/>
-            <g transform="translate(10,10)">
-              <rect x="0" y="0" width="120" height="120" fill="white"/>
-              <rect x="0" y="0" width="28" height="28" fill="#1D1D1F"/>
-              <rect x="92" y="0" width="28" height="28" fill="#1D1D1F"/>
-              <rect x="0" y="92" width="28" height="28" fill="#1D1D1F"/>
-              <rect x="92" y="92" width="28" height="28" fill="#1D1D1F"/>
-              <rect x="36" y="36" width="16" height="16" fill="#1D1D1F"/>
-              <rect x="68" y="36" width="16" height="16" fill="#1D1D1F"/>
-              <rect x="36" y="68" width="16" height="16" fill="#1D1D1F"/>
-              <rect x="52" y="68" width="16" height="16" fill="#1D1D1F"/>
-              <rect x="52" y="52" width="16" height="16" fill="#1D1D1F"/>
-              <rect x="36" y="0" width="4" height="4" fill="#1D1D1F"/>
-              <rect x="48" y="0" width="4" height="4" fill="#1D1D1F"/>
-              <rect x="52" y="0" width="4" height="4" fill="#1D1D1F"/>
-              <rect x="0" y="36" width="4" height="4" fill="#1D1D1F"/>
-              <rect x="0" y="48" width="4" height="4" fill="#1D1D1F"/>
-              <rect x="0" y="52" width="4" height="4" fill="#1D1D1F"/>
-              <rect x="116" y="36" width="4" height="4" fill="#1D1D1F"/>
-              <rect x="116" y="48" width="4" height="4" fill="#1D1D1F"/>
-              <rect x="36" y="116" width="4" height="4" fill="#1D1D1F"/>
-              <rect x="48" y="116" width="4" height="4" fill="#1D1D1F"/>
-              <rect x="52" y="116" width="4" height="4" fill="#1D1D1F"/>
-              <rect x="68" y="0" width="4" height="4" fill="#1D1D1F"/>
-              <rect x="80" y="0" width="4" height="4" fill="#1D1D1F"/>
-              <rect x="84" y="0" width="4" height="4" fill="#1D1D1F"/>
-              <rect x="116" y="68" width="4" height="4" fill="#1D1D1F"/>
-              <rect x="116" y="80" width="4" height="4" fill="#1D1D1F"/>
-              <rect x="68" y="116" width="4" height="4" fill="#1D1D1F"/>
-              <rect x="80" y="116" width="4" height="4" fill="#1D1D1F"/>
-              <rect x="84" y="116" width="4" height="4" fill="#1D1D1F"/>
-              <rect x="92" y="56" width="28" height="8" fill="#1D1D1F"/>
-              <rect x="56" y="92" width="8" height="28" fill="#1D1D1F"/>
-            </g>
-          </svg>
-        </div>
+        <svg width="120" height="120" viewBox="0 0 120 120">
+          <rect width="120" height="120" fill="white" rx="8"/>
+          <g transform="translate(8,8)">
+            <rect x="0" y="0" width="44" height="44" rx="4" fill="none" stroke="#1D1D1F" stroke-width="4"/>
+            <rect x="8" y="8" width="12" height="12" rx="2" fill="#1D1D1F"/>
+            <rect x="24" y="8" width="12" height="12" rx="2" fill="#1D1D1F"/>
+            <rect x="8" y="24" width="12" height="12" rx="2" fill="#1D1D1F"/>
+            <rect x="24" y="24" width="12" height="12" rx="2" fill="#1D1D1F"/>
+            <rect x="60" y="0" width="44" height="44" rx="4" fill="none" stroke="#1D1D1F" stroke-width="4"/>
+            <rect x="68" y="8" width="12" height="12" rx="2" fill="#1D1D1F"/>
+            <rect x="84" y="8" width="12" height="12" rx="2" fill="#1D1D1F"/>
+            <rect x="68" y="24" width="12" height="12" rx="2" fill="#1D1D1F"/>
+            <rect x="84" y="24" width="12" height="12" rx="2" fill="#1D1D1F"/>
+            <rect x="0" y="60" width="44" height="44" rx="4" fill="none" stroke="#1D1D1F" stroke-width="4"/>
+            <rect x="8" y="68" width="12" height="12" rx="2" fill="#1D1D1F"/>
+            <rect x="24" y="68" width="12" height="12" rx="2" fill="#1D1D1F"/>
+            <rect x="8" y="84" width="12" height="12" rx="2" fill="#1D1D1F"/>
+            <rect x="24" y="84" width="12" height="12" rx="2" fill="#1D1D1F"/>
+            <rect x="60" y="60" width="44" height="44" rx="4" fill="#1D1D1F" opacity="0.1"/>
+          </g>
+        </svg>
       </div>
-      <p class="qrcode-tip">长按或截图保存二维码 → 微信扫码添加</p>
     </div>
 
-    <div class="pay-status-area">
-      <button class="status-btn" @click="router.push('/user/orders')">
-        查看我的订单
-      </button>
-    </div>
+    <button class="view-btn" @click="router.push('/user/orders')">查看我的订单</button>
   </div>
 </template>
 
 <script setup lang="ts">
-import { useRouter } from 'vue-router'
+import { ref, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { showToast } from 'vant'
+import { get } from '../../utils/request'
+
+const route = useRoute()
 const router = useRouter()
+const order = ref<any>(null)
+
+onMounted(async () => {
+  const orderId = route.query.id
+  if (orderId) {
+    try {
+      const res = await get<{ code: number; data: any }>(`/api/user/order/detail/${orderId}`)
+      if (res.data.code === 200) {
+        order.value = res.data.data
+      }
+    } catch { /* ignore */ }
+  }
+})
+
+function copyOrderNo() {
+  const no = order.value?.orderNo
+  if (!no) return
+  navigator.clipboard.writeText(no).then(() => {
+    showToast('已复制订单号')
+  }).catch(() => {
+    showToast(no)
+  })
+}
 </script>
 
 <style scoped>
-.order-pay {
-  padding: 24px 16px 100px;
-  text-align: center;
-}
+.order-pay { padding: 24px 16px 100px; text-align: center; min-height: 100vh; background: #F5F5F7; }
 
-.success-animation {
-  margin-bottom: 16px;
-}
+.success-hero { margin-bottom: 24px; }
 
 .check-circle {
-  width: 64px;
-  height: 64px;
-  background: #34C759;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto;
-  box-shadow: 0 4px 14px rgba(52,199,89,0.3);
+  width: 72px; height: 72px; border-radius: 36px;
+  background: linear-gradient(135deg, #34C759, #30D158);
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 16px; box-shadow: 0 8px 24px rgba(52,199,89,0.3);
+  animation: popIn 0.4s cubic-bezier(0.34,1.56,0.64,1);
+}
+@keyframes popIn {
+  from { transform: scale(0); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
 }
 
-.pay-title {
-  font-size: 22px;
-  font-weight: 700;
-  color: #1D1D1F;
-  margin-bottom: 6px;
-  letter-spacing: -0.02em;
-}
+.pay-title { font-size: 22px; font-weight: 800; color: #1D1D1F; margin: 0 0 4px; }
+.pay-subtitle { font-size: 14px; color: #86868B; margin: 0; }
 
-.pay-subtitle {
-  font-size: 14px;
-  color: #86868B;
-  margin-bottom: 24px;
+.order-no-card {
+  background: white; border-radius: 20px; padding: 24px; margin-bottom: 16px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.04);
 }
+.no-label { font-size: 12px; color: #86868B; margin: 0 0 4px; font-weight: 600; letter-spacing: 0.05em; }
+.no-value { font-size: 24px; font-weight: 800; color: #2B95FF; margin: 0 0 8px; letter-spacing: 0.02em; font-family: 'SF Mono', 'Menlo', monospace; }
+.no-hint { font-size: 12px; color: #C7C7CC; margin: 0 0 14px; }
 
-.order-summary {
-  background: white;
-  border-radius: 16px;
-  padding: 16px;
-  text-align: left;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-  margin-bottom: 16px;
+.copy-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 10px 24px; border: 1.5px solid #2B95FF; border-radius: 24px;
+  background: white; color: #2B95FF; font-size: 14px; font-weight: 600;
+  cursor: pointer; transition: all 0.2s;
 }
+.copy-btn:active { background: #F0F7FF; transform: scale(0.97); }
 
-.summary-row {
-  display: flex;
-  justify-content: space-between;
-  padding: 6px 0;
+.info-card {
+  background: white; border-radius: 20px; padding: 20px; margin-bottom: 16px;
+  text-align: left; box-shadow: 0 2px 12px rgba(0,0,0,0.04);
 }
-
-.summary-row .label {
-  font-size: 14px;
-  color: #86868B;
+.info-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 0; border-bottom: 1px solid #F5F5F7;
 }
-
-.summary-row .value {
-  font-size: 14px;
-  color: #1D1D1F;
-  font-weight: 500;
-}
-
-.summary-row .value.highlight {
-  color: #2B95FF;
-  font-size: 18px;
-  font-weight: 700;
-}
+.info-row:last-child { border-bottom: none; }
+.info-label { font-size: 14px; color: #86868B; }
+.info-value { font-size: 14px; color: #1D1D1F; font-weight: 500; }
+.price { font-size: 20px; font-weight: 800; color: #1D1D1F; letter-spacing: -0.02em; }
 
 .qrcode-card {
-  background: white;
-  border-radius: 16px;
-  padding: 20px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-  margin-bottom: 24px;
+  background: white; border-radius: 20px; padding: 20px; margin-bottom: 20px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.04);
 }
+.qrcode-header { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 14px; font-weight: 600; color: #1D1D1F; margin-bottom: 16px; }
+.qrcode-placeholder { display: flex; justify-content: center; }
 
-.qrcode-header {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  margin-bottom: 16px;
-  font-size: 15px;
-  font-weight: 600;
-  color: #1D1D1F;
-}
-
-.qrcode-placeholder {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 12px;
-}
-
-.mock-qrcode {
-  width: 160px;
-  height: 160px;
-  background: white;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 0 0 1px rgba(0,0,0,0.05);
-}
-
-.qrcode-tip {
-  font-size: 12px;
-  color: #C7C7CC;
-  margin-top: 4px;
-}
-
-.pay-status-area {
-  padding: 0;
-}
-
-.status-btn {
-  width: 100%;
-  padding: 14px;
-  background: #F5F5F7;
-  color: #2B95FF;
-  border: none;
-  border-radius: 14px;
-  font-size: 16px;
-  font-weight: 600;
-  cursor: pointer;
+.view-btn {
+  width: 100%; padding: 16px; background: #1D1D1F; color: white; border: none;
+  border-radius: 16px; font-size: 16px; font-weight: 600; cursor: pointer;
   transition: all 0.2s;
 }
-
-.status-btn:active {
-  background: #E8E8ED;
-}
+.view-btn:active { transform: scale(0.98); background: #333; }
 </style>

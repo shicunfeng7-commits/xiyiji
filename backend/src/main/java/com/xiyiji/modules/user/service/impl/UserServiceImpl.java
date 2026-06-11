@@ -33,12 +33,13 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     }
 
     @Override
-    public void applyEmployee(Long userId, String name, String phone, String major) {
+    public void applyEmployee(Long userId, String name, String phone, String major, String grade) {
         EmployeeApplication application = new EmployeeApplication();
         application.setUserId(userId);
         application.setName(name);
         application.setPhone(phone);
         application.setMajor(major);
+        application.setGrade(grade);
         application.setStatus(0);
         application.setCreateTime(LocalDateTime.now());
         employeeApplicationMapper.insert(application);

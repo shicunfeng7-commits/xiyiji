@@ -9,11 +9,7 @@
         <span v-if="isAdmin" class="logout-btn" @click="handleLogout">退出</span>
       </div>
     </div>
-    <router-view v-slot="{ Component, route: r }">
-      <transition :name="transitionName" mode="out-in">
-        <component :is="Component" :key="r.path" />
-      </transition>
-    </router-view>
+    <router-view />
     <van-tabbar v-model="active" v-if="showTabbar" active-color="#2B95FF" inactive-color="#86868B" @change="onTabChange" :border="false">
       <van-tabbar-item v-for="tab in tabs" :key="tab.route">
         <span>{{ tab.name }}</span>
@@ -34,21 +30,6 @@ const route = useRoute()
 const router = useRouter()
 
 const active = ref(0)
-
-// 页面过渡动画方向
-const transitionName = ref('slide-left')
-let lastTabIndex = 0
-watch(active, (val, old) => {
-  transitionName.value = val > old ? 'slide-left' : 'slide-right'
-})
-watch(() => route.path, () => {
-  const currentTabs = tabs.value
-  const idx = currentTabs.findIndex(tab => route.path.startsWith(tab.route))
-  if (idx >= 0) {
-    transitionName.value = idx > lastTabIndex ? 'slide-left' : 'slide-right'
-    lastTabIndex = idx
-  }
-})
 
 interface TabConfig {
   name: string

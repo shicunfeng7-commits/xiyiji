@@ -16,6 +16,7 @@ public class EmployeeApplication {
     private String name;
     private String phone;
     private String major; // 学院专业
+    private String grade; // 年级
     private Integer status; // 0-待审核, 1-已通过, 2-已拒绝
     private String remark;
     private Long handlerId;

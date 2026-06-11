@@ -75,8 +75,9 @@ public class AdminController {
     public R<List<java.util.Map<String, Object>>> getOrders(
             @RequestParam(required = false) Integer status,
             @RequestParam(required = false, defaultValue = "createTime") String sort,
-            @RequestParam(required = false, defaultValue = "desc") String order) {
-        List<Order> orders = orderService.getAllOrders(status, sort, order);
+            @RequestParam(required = false, defaultValue = "desc") String order,
+            @RequestParam(required = false) String keyword) {
+        List<Order> orders = orderService.getAllOrders(status, sort, order, keyword);
         List<java.util.Map<String, Object>> result = new java.util.ArrayList<>();
         for (Order o : orders) {
             java.util.Map<String, Object> map = new java.util.HashMap<>();
@@ -162,6 +163,15 @@ public class AdminController {
     public R<Void> deleteEmployee(@PathVariable Long id) {
         employeeService.removeById(id);
         return R.success();
+    }
+
+    /**
+     * 删除订单（管理员）
+     */
+    @DeleteMapping("/order/{id}")
+    public R<Void> deleteOrder(@PathVariable Long id) {
+        boolean removed = orderService.removeById(id);
+        return removed ? R.success() : R.error("订单不存在");
     }
 
     // ====== 服务时间段配置 ======

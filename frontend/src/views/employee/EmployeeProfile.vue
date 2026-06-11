@@ -2,11 +2,15 @@
   <div class="employee-profile">
     <!-- 顶部头 -->
     <div class="profile-header">
-      <div class="avatar">
-        <van-icon name="contact" size="40" color="white" />
+      <div class="avatar-wrapper" @click="openAvatarPicker">
+        <div class="avatar">
+          <img v-if="avatarUrl" :src="avatarUrl" class="avatar-img" />
+          <van-icon v-else name="contact" size="40" color="white" />
+        </div>
+        <div class="avatar-badge"><van-icon name="photograph" size="12" color="white" /></div>
       </div>
       <div class="header-info">
-        <div class="name">{{ employeeName }}</div>
+        <div class="name" @click="editNickname">{{ displayName }}</div>
         <div class="phone">{{ maskedPhone }}</div>
       </div>
       <div class="status-dot" :class="statusClass"></div>
@@ -51,19 +55,34 @@
       <div v-if="recentOrders.length === 0" class="empty-mini">暂无完成订单</div>
     </div>
 
+    <!-- 编辑资料 -->
+    <div class="edit-section">
+      <div class="edit-row" @click="showEdit = true">
+        <span>编辑资料</span>
+        <van-icon name="arrow" size="16" color="#C7C7CC" />
+      </div>
+    </div>
+
     <!-- 退出登录 -->
     <div class="logout-section">
       <button class="logout-btn" @click="handleLogout">退出登录</button>
     </div>
+
+    <van-dialog v-model:show="showEdit" title="修改资料" show-cancel-button @confirm="saveProfile">
+      <van-field v-model="editName" label="姓名" placeholder="请输入姓名" maxlength="20" />
+    </van-dialog>
+
+    <input ref="galleryInput" type="file" accept="image/*" style="display:none" @change="e => onAvatarFile(e, false)" />
+    <input ref="avatarInput" type="file" accept="image/*" capture="environment" style="display:none" @change="e => onAvatarFile(e, true)" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { showToast } from 'vant'
-import { get } from '../../utils/request'
-import { getUserInfo, removeAuth } from '../../utils/auth'
+import { showToast, showDialog } from 'vant'
+import { get, post, put } from '../../utils/request'
+import { getUserInfo, setUserInfo, removeAuth } from '../../utils/auth'
 
 const router = useRouter()
 const activeRange = ref('today')
@@ -116,6 +135,64 @@ async function loadRecentOrders() {
   } catch { /* ignore */ }
 }
 
+const showEdit = ref(false)
+const editName = ref('')
+const editPhone = ref('')
+const avatarUrl = ref('')
+const avatarInput = ref<HTMLInputElement | null>(null)
+const galleryInput = ref<HTMLInputElement | null>(null)
+const displayName = ref('')
+
+function loadProfile() {
+  const info = getUserInfo() as Record<string, unknown> | null
+  displayName.value = (info?.nickname as string) || (info?.employeeName as string) || '员工'
+  avatarUrl.value = (info?.avatar as string) || ''
+}
+
+function openAvatarPicker() {
+  const actions = [{ name: '拍照' }, { name: '从相册选择' }]
+  const div = document.createElement('div')
+  // Simple approach: directly use file input
+  galleryInput.value?.click()
+}
+
+function editNickname() { showEdit.value = true; editName.value = displayName.value }
+
+async function onAvatarFile(e: Event, useCamera: boolean) {
+  const file = (e.target as HTMLInputElement).files?.[0]
+  if (!file) return
+  const reader = new FileReader()
+  reader.onload = async () => {
+    const base64 = (reader.result as string).split(',')[1]
+    try {
+      const res = await post<{ code: number; data: string }>('/api/employee/upload-photo', { image: base64 })
+      if (res.data.code === 200) {
+        avatarUrl.value = res.data.data
+        await put('/api/user/profile', { avatar: res.data.data })
+        const info = getUserInfo() as Record<string, unknown> | null
+        if (info) { info.avatar = res.data.data; setUserInfo(info) }
+        showToast('头像已更新')
+      }
+    } catch { showToast('上传失败') }
+  }
+  reader.readAsDataURL(file)
+}
+
+function openEdit() {
+  const info = getUserInfo() as Record<string, unknown> | null
+  editName.value = (info?.employeeName as string) || (info?.nickname as string) || ''
+  editPhone.value = (info?.phone as string) || ''
+  showEdit.value = true
+}
+
+function saveProfile() {
+  put('/api/user/profile', { nickname: editName.value }).then(() => {
+    const info = getUserInfo() as Record<string, unknown> | null
+    if (info) { info.nickname = editName.value; setUserInfo(info) }
+    showToast('保存成功')
+  }).catch(() => showToast('保存失败'))
+}
+
 function switchRange(key: string) {
   activeRange.value = key
   loadStats()
@@ -127,6 +204,7 @@ function handleLogout() {
 }
 
 onMounted(() => {
+  loadProfile()
   loadStats()
   loadRecentOrders()
 })

@@ -18,20 +18,28 @@
       <div class="card" v-for="item in list" :key="item.id">
         <div class="card-body">
           <div class="info-row">
-            <span class="label">申请人</span>
+            <span class="label">姓名</span>
             <span class="value">{{ item.name }}</span>
           </div>
           <div class="info-row">
             <span class="label">手机号</span>
-            <span class="value">{{ item.phone }}</span>
+            <span class="value">{{ item.phone || '未填写' }}</span>
+          </div>
+          <div class="info-row">
+            <span class="label">专业</span>
+            <span class="value">{{ item.major || '未填写' }}</span>
+          </div>
+          <div class="info-row">
+            <span class="label">年级</span>
+            <span class="value">{{ item.grade || '未填写' }}</span>
           </div>
           <div class="info-row">
             <span class="label">申请时间</span>
-            <span class="value">{{ item.applyTime }}</span>
+            <span class="value">{{ item.createTime }}</span>
           </div>
           <div v-if="item.status !== 'pending'" class="info-row">
             <span class="label">审核时间</span>
-            <span class="value">{{ item.auditTime }}</span>
+            <span class="value">{{ item.handleTime || '-' }}</span>
           </div>
         </div>
         <div class="card-footer">
@@ -89,8 +97,16 @@ function switchTab(tab: string) {
 }
 
 function fetchList() {
-  get('/api/admin/employee/applications', { status: currentTab.value }).then((res: any) => {
-    list.value = res.data || []
+  const statusMap: Record<string, number> = { pending: 0, approved: 1, rejected: 2 }
+  get<{ code: number; data: any[] }>('/api/admin/employee/applications', { status: statusMap[currentTab.value] }).then((res: any) => {
+    if (res.data.code === 200) {
+      list.value = (res.data.data || []).map((item: any) => ({
+        ...item,
+        status: item.status === 0 ? 'pending' : item.status === 1 ? 'approved' : 'rejected',
+        createTime: item.createTime || '',
+        handleTime: item.handleTime || '',
+      }))
+    }
   }).catch(() => {
     showToast('加载失败')
   })

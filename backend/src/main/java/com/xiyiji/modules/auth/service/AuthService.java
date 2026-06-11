@@ -39,6 +39,7 @@ public class AuthService {
         userInfo.put("id", user.getId());
         userInfo.put("phone", user.getPhone());
         userInfo.put("nickname", user.getNickname());
+        userInfo.put("avatar", user.getAvatar());
         userInfo.put("role", user.getRole());
 
         // 如果 role=1（员工），查询 employee 表获取员工信息

@@ -34,13 +34,9 @@
       </button>
     </div>
 
-    <button class="admin-login-btn" @click="goAdminLogin">
-      管理员登录
-    </button>
+    <button class="admin-login-btn" @click="goAdminLogin">管理员登录</button>
 
-    <div class="footer-note">
-      登录即表示同意《服务条款》和《隐私政策》
-    </div>
+    <div class="footer-note">登录即表示同意《服务条款》和《隐私政策》</div>
   </div>
 </template>
 
@@ -221,14 +217,13 @@ function goAdminLogin() {
 }
 
 .admin-login-btn {
-  width: 100%;
-  max-width: 360px;
-  height: 48px;
-  border: 1px solid rgba(43, 149, 255, 0.3);
-  border-radius: 12px;
-  font-size: 15px;
+  margin-top: 60px;
+  padding: 10px 28px;
+  border: 1px solid rgba(43, 149, 255, 0.2);
+  border-radius: 22px;
+  font-size: 13px;
   font-weight: 500;
-  color: #2B95FF;
+  color: #86868B;
   background: transparent;
   cursor: pointer;
   transition: all 0.2s;
@@ -236,7 +231,8 @@ function goAdminLogin() {
 }
 
 .admin-login-btn:active {
-  background: rgba(43, 149, 255, 0.05);
+  background: rgba(43, 149, 255, 0.04);
+  color: #2B95FF;
 }
 
 .footer-note {

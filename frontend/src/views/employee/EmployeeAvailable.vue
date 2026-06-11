@@ -1,5 +1,10 @@
 <template>
   <div class="employee-available">
+    <!-- 下单悬浮按钮 -->
+    <div class="fab" @click="router.push('/user/order/create')">
+      <van-icon name="add-o" size="22" color="white" />
+    </div>
+
     <div class="notification-banner">
       <van-icon name="info-o" size="16" color="#2B95FF" />
       <span>新订单实时推送，点击即可抢单</span>
@@ -55,8 +60,11 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { showToast, showConfirmDialog, showNotify } from 'vant'
 import { post, get } from '../../utils/request'
+
+const router = useRouter()
 
 const availableOrders = ref<any[]>([])
 const showNotification = ref(false)
@@ -220,6 +228,15 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+.fab {
+  position: fixed; bottom: 80px; right: 20px; z-index: 99;
+  width: 48px; height: 48px; border-radius: 24px;
+  background: #2B95FF; display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 16px rgba(43,149,255,0.4); cursor: pointer;
+  transition: transform 0.2s cubic-bezier(0.34,1.56,0.64,1);
+}
+.fab:active { transform: scale(0.9); }
+
 .employee-available {
   padding: 12px 16px 100px;
 }
