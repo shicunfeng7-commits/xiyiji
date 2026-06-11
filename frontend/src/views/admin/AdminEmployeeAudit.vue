@@ -136,18 +136,19 @@ function showRejectDialog(item: any) {
   rejectDialogShow.value = true
 }
 
-function doReject() {
-  if (!rejectReason.value) {
+async function doReject() {
+  if (!rejectReason.value.trim()) {
     showToast('请输入拒绝原因')
     return
   }
-  post(`/api/admin/employee/reject/${currentRejectItem.value.id}`, { reason: rejectReason.value }).then(() => {
+  try {
+    await post(`/api/admin/employee/reject/${currentRejectItem.value.id}?remark=${encodeURIComponent(rejectReason.value.trim())}`)
     showToast('已拒绝')
     rejectDialogShow.value = false
     fetchList()
-  }).catch(() => {
+  } catch {
     showToast('操作失败')
-  })
+  }
 }
 
 fetchList()

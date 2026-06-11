@@ -75,10 +75,12 @@ let ws: WebSocket | null = null
 let reconnectTimer: number | null = null
 
 function connectWebSocket() {
-  // 获取token用于WebSocket连接认证
-  const token = localStorage.getItem('token') || ''
+  const token = localStorage.getItem('washpro_token')
+  if (!token) return
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-  const wsUrl = `${protocol}//${window.location.host}/ws/employee?token=${token}`
+  const backendHost = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+  const backendUrl = new URL(backendHost)
+  const wsUrl = `${protocol}//${backendUrl.host}/ws/employee?token=${token}`
   
   ws = new WebSocket(wsUrl)
   
@@ -102,11 +104,11 @@ function connectWebSocket() {
   }
   
   ws.onerror = (error) => {
-    console.error('WebSocket error:', error)
+    // WebSocket server not running
   }
   
   ws.onclose = () => {
-    console.log('WebSocket disconnected, reconnecting...')
+    // reconnecting
     reconnectTimer = window.setTimeout(() => {
       connectWebSocket()
     }, 5000)

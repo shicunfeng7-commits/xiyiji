@@ -6,11 +6,18 @@
       </div>
       <div class="header-title">{{ headerTitle }}</div>
       <div class="header-right">
-        <span v-if="isAdmin" class="logout-btn" @click="handleLogout">退出</span>
+        <span v-if="isAdmin" class="logout-chip" @click="handleLogout">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          退出
+        </span>
       </div>
     </div>
-    <router-view />
-    <van-tabbar v-model="active" v-if="showTabbar" active-color="#2B95FF" inactive-color="#86868B" @change="onTabChange" :border="false">
+    <router-view v-slot="{ Component }">
+      <transition name="page-slide" mode="out-in">
+        <component :is="Component" />
+      </transition>
+    </router-view>
+    <van-tabbar v-model="active" v-if="showTabbar" active-color="#007AFF" inactive-color="#86868B" @change="onTabChange" :border="false">
       <van-tabbar-item v-for="tab in tabs" :key="tab.route">
         <span>{{ tab.name }}</span>
         <template #icon>
@@ -25,22 +32,16 @@
 import { ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getToken, getUserInfo, removeAuth } from './utils/auth'
+import { showToast as vantToast } from 'vant'
 
 const route = useRoute()
 const router = useRouter()
-
 const active = ref(0)
 
-interface TabConfig {
-  name: string
-  icon: string
-  route: string
-}
+interface TabConfig { name: string; icon: string; route: string }
 
 const tabsConfig: Record<string, TabConfig[]> = {
-  guest: [
-    { name: '登录', icon: 'contact-o', route: '/login' }
-  ],
+  guest: [{ name: '登录', icon: 'contact-o', route: '/login' }],
   user: [
     { name: '首页', icon: 'home-o', route: '/user/home' },
     { name: '订单', icon: 'orders-o', route: '/user/orders' },
@@ -61,8 +62,6 @@ const tabsConfig: Record<string, TabConfig[]> = {
 }
 
 const userRole = computed(() => {
-  // 依赖 route.path 使 computed 在导航时重新计算
-  // localStorage 读取不是响应式的，需要手动建立响应式依赖
   void route.path
   const token = getToken()
   if (!token) return 'guest'
@@ -75,181 +74,103 @@ const userRole = computed(() => {
   return 'guest'
 })
 
-const tabs = computed(() => {
-  return tabsConfig[userRole.value] || tabsConfig.guest
-})
+const tabs = computed(() => tabsConfig[userRole.value] || tabsConfig.guest)
 
-// 监听路由变化，同步 active 索引（最长前缀匹配，避免 /admin/employees 误匹配 /admin/employee/audit）
 watch(() => route.path, (path) => {
   const currentTabs = tabs.value
-  let bestIndex = -1
-  let bestLen = 0
+  let bestIndex = -1, bestLen = 0
   currentTabs.forEach((tab, i) => {
-    if (path.startsWith(tab.route) && tab.route.length > bestLen) {
-      bestIndex = i
-      bestLen = tab.route.length
-    }
+    if (path.startsWith(tab.route) && tab.route.length > bestLen) { bestIndex = i; bestLen = tab.route.length }
   })
-  if (bestIndex >= 0) {
-    active.value = bestIndex
-  }
+  if (bestIndex >= 0) active.value = bestIndex
 }, { immediate: true })
 
 function onTabChange(index: number) {
   const tab = tabs.value[index]
-  if (tab) {
-    router.push(tab.route)
-  }
+  if (tab) router.push(tab.route)
 }
 
 const showTabbar = computed(() => {
-  return route.path !== '/login' &&
-         route.path !== '/admin/login' &&
-         !route.path.includes('/order/create') &&
-         !route.path.includes('/order/pay') &&
-         !route.path.includes('/order/detail')
+  return route.path !== '/login' && route.path !== '/admin/login' &&
+    !route.path.includes('/order/create') && !route.path.includes('/order/pay') && !route.path.includes('/order/detail')
 })
-
 const showHeader = computed(() => {
-  return route.path !== '/login' &&
-         route.path !== '/admin/dashboard' &&
-         !route.path.includes('/home')
+  return route.path !== '/login' && route.path !== '/admin/dashboard' && !route.path.includes('/home')
 })
-
 const isHome = computed(() => route.path === '/user/home')
 const isAdmin = computed(() => userRole.value === 'admin')
 
-function handleLogout() {
-  removeAuth()
-  router.push('/login')
-}
+function handleLogout() { removeAuth(); router.push('/login') }
 
 const headerTitle = computed(() => {
   const map: Record<string, string> = {
-    '/user/orders': '我的订单',
-    '/user/order/create': '预约清洗',
-    '/user/order/pay': '支付',
-    '/user/order/detail': '订单详情',
-    '/user/profile': '我的',
-    '/admin/login': '管理员登录',
-    '/admin/dashboard': '数据看板',
-    '/admin/orders': '订单管理',
-    '/admin/employees': '员工管理',
-    '/admin/employee/audit': '员工审核',
-    '/admin/time-config': '时间配置',
-    '/employee/available': '待抢订单',
-    '/employee/my-orders': '我的订单',
-    '/employee/profile': '我的',
+    '/user/orders': '我的订单', '/user/order/create': '预约清洗', '/user/order/pay': '支付',
+    '/user/order/detail': '订单详情', '/user/profile': '我的',
+    '/admin/login': '管理员登录', '/admin/dashboard': '数据看板', '/admin/orders': '订单管理',
+    '/admin/employees': '员工管理', '/admin/employee/audit': '员工审核', '/admin/time-config': '时间配置',
+    '/employee/available': '待抢订单', '/employee/my-orders': '我的订单', '/employee/profile': '我的',
     '/employee/order-history': '完成订单',
   }
-  let bestTitle = 'WashPro'
-  let bestLen = 0
+  let bestTitle = 'WashPro', bestLen = 0
   for (const [path, title] of Object.entries(map)) {
-    if (route.path.startsWith(path) && path.length > bestLen) {
-      bestTitle = title
-      bestLen = path.length
-    }
+    if (route.path.startsWith(path) && path.length > bestLen) { bestTitle = title; bestLen = path.length }
   }
   return bestTitle
 })
 
-function goBack() {
-  router.back()
-}
+function goBack() { router.back() }
 </script>
 
 <style>
 .app-container {
-  max-width: 430px;
-  margin: 0 auto;
-  min-height: 100vh;
-  background-color: #F5F5F7;
-  position: relative;
-  padding-bottom: 64px;
+  max-width: 100%; width: 100%; margin: 0 auto;
+  min-height: 100vh; min-height: 100dvh;
+  background: var(--color-bg-deep);
+  position: relative; padding-bottom: 64px;
+  overflow-x: hidden;
 }
+@media (min-width: 431px) { .app-container { max-width: 430px; } }
 
 .app-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  display: flex; align-items: center; justify-content: space-between;
   padding: 12px 16px;
-  background: rgba(255,255,255,0.9);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(0,0,0,0.05);
-  position: sticky;
-  top: 0;
-  z-index: 100;
+  background: var(--glass-bg); backdrop-filter: blur(var(--glass-blur)); -webkit-backdrop-filter: blur(var(--glass-blur));
+  border-bottom: 1px solid var(--glass-border);
+  position: sticky; top: 0; z-index: 100;
+}
+.header-left { width: 36px; display: flex; align-items: center; }
+.header-right { display: flex; align-items: center; justify-content: flex-end; min-width: 60px; }
+.header-title { font-size: 17px; font-weight: 700; color: var(--color-text-primary); letter-spacing: -0.02em; flex: 1; text-align: center; }
+
+.logout-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11px; font-weight: 500; color: var(--color-text-secondary);
+  padding: 6px 12px; border-radius: 16px;
+  background: var(--glass-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(0,0,0,0.06); box-shadow: var(--shadow-sm);
+  cursor: pointer; transition: all var(--transition-fast); white-space: nowrap; flex-shrink: 0;
+}
+.logout-chip:active { background: rgba(255,59,48,0.06); color: var(--color-danger); }
+
+/* ===== Page Transitions ===== */
+.page-slide-enter-active, .page-slide-leave-active { transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1); }
+.page-slide-enter-from { opacity: 0; transform: translateX(24px); }
+.page-slide-leave-to { opacity: 0; transform: translateX(-24px); }
+
+/* ===== Tabbar ===== */
+:deep(.van-tabbar) {
+  background: var(--glass-bg) !important; backdrop-filter: blur(var(--glass-blur)) !important;
+  -webkit-backdrop-filter: blur(var(--glass-blur)) !important; border-top: 1px solid var(--glass-border) !important;
+}
+:deep(.van-tabbar-item) {
+  color: var(--color-text-tertiary) !important;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+}
+:deep(.van-tabbar-item--active) {
+  color: var(--color-accent) !important;
+  transform: scale(1.08);
 }
 
-.header-left, .header-right {
-  width: 40px;
-  display: flex;
-  align-items: center;
-}
-
-.header-title {
-  font-size: 17px;
-  font-weight: 600;
-  color: #1D1D1F;
-  letter-spacing: -0.02em;
-}
-
-.logout-btn {
-  font-size: 14px;
-  color: #FF3B30;
-  cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 6px;
-  transition: background 0.2s;
-}
-.logout-btn:active {
-  background: rgba(255, 59, 48, 0.1);
-}
-
-/* ===== Apple 风格页面过渡动画 ===== */
-.slide-left-enter-active,
-.slide-left-leave-active,
-.slide-right-enter-active,
-.slide-right-leave-active {
-  transition: all 0.35s cubic-bezier(0.25, 0.1, 0.25, 1);
-}
-.slide-left-enter-from {
-  opacity: 0;
-  transform: translateX(40px);
-}
-.slide-left-leave-to {
-  opacity: 0;
-  transform: translateX(-30px);
-}
-.slide-right-enter-from {
-  opacity: 0;
-  transform: translateX(-40px);
-}
-.slide-right-leave-to {
-  opacity: 0;
-  transform: translateX(30px);
-}
-
-/* 页面内容入场微动画 */
-.order-card, .stat-card, .feature-card, .order-card, .photo-group {
-  animation: cardIn 0.45s cubic-bezier(0.25, 0.1, 0.25, 1) both;
-}
-.order-card:nth-child(2) { animation-delay: 0.05s; }
-.order-card:nth-child(3) { animation-delay: 0.1s; }
-.order-card:nth-child(4) { animation-delay: 0.15s; }
-.order-card:nth-child(5) { animation-delay: 0.2s; }
-
-@keyframes cardIn {
-  from { opacity: 0; transform: translateY(20px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-/* Tabbar 标签切换微动 */
-.van-tabbar-item {
-  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-.van-tabbar-item--active {
-  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
+/* ===== Toast ===== */
+:deep(.van-toast) { bottom: 80px !important; top: auto !important; border-radius: 12px !important; }
 </style>

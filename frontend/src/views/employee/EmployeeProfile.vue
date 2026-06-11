@@ -55,25 +55,12 @@
       <div v-if="recentOrders.length === 0" class="empty-mini">暂无完成订单</div>
     </div>
 
-    <!-- 编辑资料 -->
-    <div class="edit-section">
-      <div class="edit-row" @click="showEdit = true">
-        <span>编辑资料</span>
-        <van-icon name="arrow" size="16" color="#C7C7CC" />
-      </div>
-    </div>
-
     <!-- 退出登录 -->
     <div class="logout-section">
       <button class="logout-btn" @click="handleLogout">退出登录</button>
     </div>
 
-    <van-dialog v-model:show="showEdit" title="修改资料" show-cancel-button @confirm="saveProfile">
-      <van-field v-model="editName" label="姓名" placeholder="请输入姓名" maxlength="20" />
-    </van-dialog>
-
     <input ref="galleryInput" type="file" accept="image/*" style="display:none" @change="e => onAvatarFile(e, false)" />
-    <input ref="avatarInput" type="file" accept="image/*" capture="environment" style="display:none" @change="e => onAvatarFile(e, true)" />
   </div>
 </template>
 

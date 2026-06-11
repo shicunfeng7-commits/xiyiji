@@ -15,6 +15,8 @@ public class User {
     private String nickname;
     private String avatar;
     private String phone;
+    private String buildingName;
+    private String roomNo;
     private Integer role; // 0-普通用户, 1-员工
     private LocalDateTime createTime;
     private LocalDateTime updateTime;

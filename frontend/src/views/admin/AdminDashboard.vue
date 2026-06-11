@@ -1,15 +1,18 @@
 <template>
   <div class="dashboard">
     <div class="dash-header">
-      <div>
-        <h1 class="dash-title">数据看板</h1>
-        <p class="dash-date">{{ today }}</p>
-      </div>
-      <div class="header-right">
-        <div class="range-select">
-          <span v-for="r in ranges" :key="r.key" class="range-item" :class="{ active: dateRange === r.key }" @click="switchRange(r.key)">{{ r.label }}</span>
+      <div class="dash-top">
+        <div>
+          <h1 class="dash-title">数据看板</h1>
+          <p class="dash-date">{{ today }}</p>
         </div>
-        <span class="logout-link" @click="handleLogout">退出</span>
+        <span class="logout-chip" @click="handleLogout">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          退出
+        </span>
+      </div>
+      <div class="range-select">
+        <span v-for="r in ranges" :key="r.key" class="range-item" :class="{ active: dateRange === r.key }" @click="switchRange(r.key)">{{ r.label }}</span>
       </div>
     </div>
 
@@ -155,25 +158,35 @@ onMounted(loadData)
 </script>
 
 <style scoped>
-.dashboard { padding: 20px 16px 80px; min-height: 100vh; background: #F5F5F7; }
+.dashboard { padding: 20px 16px 80px; min-height: 100vh; background: var(--color-bg-deep); }
 
 .dash-header { margin-bottom: 20px; }
-.dash-title { font-size: 28px; font-weight: 800; color: #1D1D1F; letter-spacing: -0.03em; margin: 0; }
-.dash-date { font-size: 13px; color: #86868B; margin: 2px 0 0; }
+.dash-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+.dash-title { font-size: 28px; font-weight: 800; color: var(--color-text-primary); letter-spacing: -0.04em; margin: 0; }
+.dash-date { font-size: 13px; color: var(--color-text-secondary); margin: 2px 0 0; }
 
-.header-right { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; }
+.range-select { display: inline-flex; background: var(--glass-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(0,0,0,0.06); border-radius: 12px; padding: 3px; }
+.range-item { padding: 7px 18px; font-size: 13px; font-weight: 600; color: var(--color-text-secondary); border-radius: 10px; cursor: pointer; transition: all var(--transition-normal); }
+.range-item.active { background: #1D1D1F; color: white; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
 
-.range-select { display: flex; background: #E8E8ED; border-radius: 10px; padding: 2px; }
-.range-item { padding: 6px 16px; font-size: 13px; font-weight: 600; color: #86868B; border-radius: 8px; cursor: pointer; transition: all 0.25s cubic-bezier(0.25,0.1,0.25,1); }
-.range-item.active { background: white; color: #1D1D1F; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
-
-.logout-link { font-size: 14px; color: #FF3B30; cursor: pointer; font-weight: 500; }
-.logout-link:active { opacity: 0.7; }
+.logout-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 12px; font-weight: 500; color: var(--color-text-secondary);
+  padding: 7px 14px; border-radius: 18px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(0,0,0,0.06);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer; transition: all var(--transition-fast);
+}
+.logout-chip:hover { color: var(--color-text-primary); }
+.logout-chip:active { background: rgba(255,59,48,0.05); color: var(--color-danger); }
 
 .kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
 
 .kpi-card {
-  background: white; border-radius: 20px; padding: 18px;
+  background: var(--glass-bg-card); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(0,0,0,0.06); border-radius: 20px; padding: 18px;
   box-shadow: 0 1px 3px rgba(0,0,0,0.03);
   transition: transform 0.2s;
 }
@@ -185,14 +198,14 @@ onMounted(loadData)
 .emp-icon { background: #FFF3E0; color: #E65100; }
 .star-icon { background: #FFF8E1; color: #F9A825; }
 
-.kpi-value { font-size: 26px; font-weight: 800; color: #1D1D1F; letter-spacing: -0.02em; }
-.kpi-label { font-size: 12px; color: #86868B; margin-top: 2px; }
+.kpi-value { font-size: 26px; font-weight: 800; color: var(--color-text-primary); letter-spacing: -0.02em; }
+.kpi-label { font-size: 12px; color: var(--color-text-secondary); margin-top: 2px; }
 
 .section {
-  background: white; border-radius: 20px; padding: 18px; margin-bottom: 14px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+  background: var(--glass-bg-card); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(0,0,0,0.06); border-radius: 20px; padding: 18px; margin-bottom: 14px;
 }
-.section-title { font-size: 16px; font-weight: 700; color: #1D1D1F; margin: 0 0 14px; }
+.section-title { font-size: 16px; font-weight: 700; color: var(--color-text-primary); margin: 0 0 14px; }
 
 .status-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
 .status-row:last-child { margin-bottom: 0; }

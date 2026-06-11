@@ -202,6 +202,9 @@ public class UserController {
         if (user == null) return R.error("用户不存在");
         if (body.containsKey("nickname")) user.setNickname(body.get("nickname"));
         if (body.containsKey("avatar")) user.setAvatar(body.get("avatar"));
+        if (body.containsKey("phone")) user.setPhone(body.get("phone"));
+        if (body.containsKey("buildingName")) user.setBuildingName(body.get("buildingName"));
+        if (body.containsKey("roomNo")) user.setRoomNo(body.get("roomNo"));
         userService.updateById(user);
         return R.success();
     }

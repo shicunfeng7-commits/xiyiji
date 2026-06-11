@@ -3,6 +3,8 @@ import { createPinia } from 'pinia'
 import router from './router'
 import App from './App.vue'
 import 'vant/lib/index.css'
+import './styles/variables.css'
+import './styles/theme-dark.css'
 
 const app = createApp(App)
 app.use(createPinia())

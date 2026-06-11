@@ -1,0 +1,82 @@
+/* ========== WashPro Light Glassmorphism Theme ========== */
+
+/* Page backgrounds */
+.user-home, .user-orders, .user-profile, .order-create, .order-pay, .order-detail,
+.admin-dashboard, .admin-orders, .admin-employees, .admin-employee-audit, .admin-time-config,
+.employee-available, .employee-myorders, .employee-profile, .order-history,
+.admin-login, .employee-login, .login-page {
+  background: var(--color-bg-deep) !important;
+}
+
+/* Cards → Glass white */
+.order-card, .info-card, .apply-card, .status-card, .period-card, .stats-card,
+.recent-section, .filter-card, .section-card, .qrcode-card, .order-no-card,
+.mini-card, .review-card, .logs-section, .form-card {
+  background: var(--glass-bg-card) !important;
+  backdrop-filter: blur(var(--glass-blur)) !important;
+  -webkit-backdrop-filter: blur(var(--glass-blur)) !important;
+  border: 1px solid var(--glass-border) !important;
+  box-shadow: var(--shadow-sm) !important;
+}
+
+/* Text colors */
+.info-label, .label, .form-label, .period-name, .stats-title, .section-title,
+.card-header span:first-child, .timeline-label, .photo-group-title,
+.mini-no, .order-no, .rank-name, .s-name, .status-name, .no-label {
+  color: var(--color-text-secondary) !important;
+}
+.info-value, .value, .period-range, .stat-value, .kpi-value, .order-amount,
+.card-loc, .building-type, .no-value, .pay-title, .app-name,
+.rank-count, .mini-amount, .order-no,
+.section-title, .stats-title, .dash-title, .page-title {
+  color: var(--color-text-primary) !important;
+}
+
+/* Buttons */
+.apply-btn, .cta-btn, .pay-btn, .complete-btn, .save-btn, .submit-btn, .view-btn,
+.grab-btn, .hero-btn, .login-btn.active, .order-now-btn {
+  background: var(--color-accent) !important;
+  box-shadow: var(--shadow-glow-sm) !important;
+}
+
+/* Status bar backgrounds */
+.s-bar-wrap, .status-bar-wrapper { background: rgba(0,0,0,0.04) !important; }
+
+/* Tab bars */
+.status-tab {
+  background: white !important;
+  color: var(--color-text-secondary) !important;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.03) !important;
+}
+.status-tab.active { background: var(--color-text-primary) !important; color: white !important; }
+
+/* Headers */
+.app-header { background: rgba(242,242,247,0.8) !important; }
+.page-header { background: transparent !important; }
+
+/* Feature cards */
+.feature-card, .step-item {
+  background: var(--glass-bg-card) !important;
+  backdrop-filter: blur(var(--glass-blur)) !important;
+  -webkit-backdrop-filter: blur(var(--glass-blur)) !important;
+  border: 1px solid var(--glass-border) !important;
+}
+
+/* Dialog overrides */
+.van-dialog {
+  background: rgba(255,255,255,0.95) !important;
+  backdrop-filter: blur(30px) !important;
+  -webkit-backdrop-filter: blur(30px) !important;
+  border: 1px solid rgba(0,0,0,0.06) !important;
+}
+
+/* Popups */
+.van-popup { background: rgba(255,255,255,0.95) !important; }
+
+/* Search */
+.van-search__content { background: rgba(0,0,0,0.04) !important; border: 1px solid rgba(0,0,0,0.06) !important; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 2px; }

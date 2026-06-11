@@ -60,6 +60,12 @@
         <van-field v-model="roomNo" placeholder="例如：301、502" clearable />
       </div>
 
+      <!-- 手机号 -->
+      <div class="form-section">
+        <div class="form-label">联系手机号</div>
+        <van-field v-model="contactPhone" placeholder="请输入联系电话" clearable maxlength="11" type="tel" />
+      </div>
+
       <!-- 上门日期 -->
       <div class="form-section">
         <div class="form-label">上门日期</div>
@@ -221,6 +227,7 @@ function openBuildingPopup() {
 
 // ---- 房间号 ----
 const roomNo = ref('')
+const contactPhone = ref('')
 
 // ---- 日期 ----
 const showDatePicker = ref(false)
@@ -346,6 +353,7 @@ async function handleSubmit() {
       startTime: startTime.value,
       endTime: endTime.value,
       remark: remark.value,
+      contactPhone: contactPhone.value,
       amount: 29.9,
     })
     if (res.data.code === 200) {

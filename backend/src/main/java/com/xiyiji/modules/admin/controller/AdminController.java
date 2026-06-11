@@ -304,20 +304,23 @@ public class AdminController {
                 .eq(com.xiyiji.modules.order.entity.Order::getStatus, 3)));
         result.put("statusDistribution", statusDistribution);
         
-        // 营收趋势（从数据库获取最近7天数据）
+        // 营收趋势（根据range参数动态调整）
         java.util.List<java.util.Map<String, Object>> revenueTrend = new java.util.ArrayList<>();
-        String[] weekDays = {"周一", "周二", "周三", "周四", "周五", "周六", "周日"};
         java.time.LocalDate today = java.time.LocalDate.now();
-        for (int i = 6; i >= 0; i--) {
+        int days = "quarter".equals(range) ? 90 : "month".equals(range) ? 30 : 7;
+        String[] weekDays = {"周一","周二","周三","周四","周五","周六","周日"};
+        for (int i = days - 1; i >= 0; i--) {
             java.time.LocalDate date = today.minusDays(i);
-            java.util.Map<String, Object> day = new java.util.HashMap<>();
-            day.put("label", weekDays[(date.getDayOfWeek().getValue() + 5) % 7]);
+            String label = days <= 7 ? weekDays[(date.getDayOfWeek().getValue() + 5) % 7]
+                    : date.getMonthValue() + "/" + date.getDayOfMonth();
             java.math.BigDecimal dayRevenue = orderService.list(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<com.xiyiji.modules.order.entity.Order>()
                     .eq(com.xiyiji.modules.order.entity.Order::getStatus, 3)
-                    .eq(com.xiyiji.modules.order.entity.Order::getServiceDate, date.toString()))
+                    .apply("DATE(complete_time) = {0}", date.toString()))
                     .stream()
-                    .map(com.xiyiji.modules.order.entity.Order::getAmount)
+                    .map(o -> o.getAmount() != null ? o.getAmount() : java.math.BigDecimal.ZERO)
                     .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+            java.util.Map<String, Object> day = new java.util.HashMap<>();
+            day.put("label", label);
             day.put("amount", dayRevenue.doubleValue());
             revenueTrend.add(day);
         }

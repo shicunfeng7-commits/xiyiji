@@ -154,18 +154,14 @@ public class EmployeeController {
                 break;
         }
 
-        java.util.List<Order> orders = orderService.lambdaQuery()
+        var query = orderService.lambdaQuery()
                 .eq(Order::getEmployeeId, employee.getId())
                 .eq(Order::getStatus, 3)
-                .ge(Order::getCompleteTime, start.atStartOfDay())
-                .le(range.equals("today") ? Order::getCompleteTime : Order::getId, range.equals("today") ? end.plusDays(1).atStartOfDay() : null)
-                .list();
-
-        if (!range.equals("today")) {
-            orders = orders.stream()
-                    .filter(o -> !o.getCompleteTime().toLocalDate().isBefore(start))
-                    .toList();
+                .ge(Order::getCompleteTime, start.atStartOfDay());
+        if (range.equals("today")) {
+            query.le(Order::getCompleteTime, end.plusDays(1).atStartOfDay());
         }
+        java.util.List<Order> orders = query.list();
 
         java.math.BigDecimal totalRevenue = orders.stream()
                 .map(o -> o.getAmount() != null ? o.getAmount() : java.math.BigDecimal.ZERO)
