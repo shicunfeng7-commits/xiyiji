@@ -191,7 +191,7 @@ public class AdminController {
         // 订单统计
         long totalOrders = orderService.count();
         result.put("totalOrders", totalOrders);
-        result.put("orderTrend", calculateTrend(120, 100));
+        result.put("orderTrend", 0);
         
         // 营收统计
         java.math.BigDecimal totalRevenue = orderService.list().stream()
@@ -199,17 +199,16 @@ public class AdminController {
                 .map(com.xiyiji.modules.order.entity.Order::getAmount)
                 .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
         result.put("totalRevenue", totalRevenue.doubleValue());
-        result.put("revenueTrend", calculateTrend(5800, 5000));
+        result.put("revenueTrend", 0);
         
         // 员工统计
         long activeEmployees = employeeService.count();
         result.put("activeEmployees", activeEmployees);
-        result.put("employeeTrend", calculateTrend(15, 12));
+        result.put("employeeTrend", 0);
         
         // 评价统计
-        double avgRating = 4.8;
-        result.put("avgRating", avgRating);
-        result.put("ratingTrend", 2);
+        result.put("avgRating", 0);
+        result.put("ratingTrend", 0);
         
         // 订单状态分布
         java.util.Map<String, Object> statusDistribution = new java.util.HashMap<>();
@@ -223,40 +222,73 @@ public class AdminController {
                 .eq(com.xiyiji.modules.order.entity.Order::getStatus, 3)));
         result.put("statusDistribution", statusDistribution);
         
-        // 营收趋势（模拟数据）
+        // 营收趋势（从数据库获取最近7天数据）
         java.util.List<java.util.Map<String, Object>> revenueTrend = new java.util.ArrayList<>();
-        int[] amounts = {850, 1200, 980, 1500, 1100, 1800, 1350};
-        for (int i = 0; i < 7; i++) {
+        String[] weekDays = {"周一", "周二", "周三", "周四", "周五", "周六", "周日"};
+        java.time.LocalDate today = java.time.LocalDate.now();
+        for (int i = 6; i >= 0; i--) {
+            java.time.LocalDate date = today.minusDays(i);
             java.util.Map<String, Object> day = new java.util.HashMap<>();
-            day.put("amount", amounts[i]);
+            day.put("label", weekDays[(date.getDayOfWeek().getValue() + 5) % 7]);
+            java.math.BigDecimal dayRevenue = orderService.list(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<com.xiyiji.modules.order.entity.Order>()
+                    .eq(com.xiyiji.modules.order.entity.Order::getStatus, 3)
+                    .eq(com.xiyiji.modules.order.entity.Order::getServiceDate, date.toString()))
+                    .stream()
+                    .map(com.xiyiji.modules.order.entity.Order::getAmount)
+                    .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+            day.put("amount", dayRevenue.doubleValue());
             revenueTrend.add(day);
         }
         result.put("revenueTrend", revenueTrend);
         
-        // 楼栋订单排行（模拟数据）
+        // 楼栋订单排行（从数据库统计）
         java.util.List<java.util.Map<String, Object>> buildingRanking = new java.util.ArrayList<>();
-        String[] buildings = {"食宿楼1栋", "食宿楼2栋", "学生宿舍1栋", "学生宿舍2栋", "教师公寓A栋"};
-        int[] buildingCounts = {45, 38, 32, 28, 25};
-        for (int i = 0; i < buildings.length; i++) {
-            java.util.Map<String, Object> item = new java.util.HashMap<>();
-            item.put("name", buildings[i]);
-            item.put("count", buildingCounts[i]);
-            buildingRanking.add(item);
-        }
+        java.util.Map<String, Long> buildingCountMap = new java.util.HashMap<>();
+        orderService.list().forEach(order -> {
+            String building = order.getBuildingName();
+            if (building != null && building.contains("·")) {
+                building = building.split("·")[0].trim();
+            }
+            buildingCountMap.merge(building, 1L, Long::sum);
+        });
+        buildingCountMap.entrySet().stream()
+                .sorted((a, b) -> Long.compare(b.getValue(), a.getValue()))
+                .limit(5)
+                .forEach(entry -> {
+                    java.util.Map<String, Object> item = new java.util.HashMap<>();
+                    item.put("name", entry.getKey());
+                    item.put("count", entry.getValue());
+                    buildingRanking.add(item);
+                });
         result.put("buildingRanking", buildingRanking);
         
-        // 员工服务排行（模拟数据）
+        // 员工服务排行（从数据库统计）
         java.util.List<java.util.Map<String, Object>> employeeRanking = new java.util.ArrayList<>();
-        String[] employees = {"张师傅", "李师傅", "王师傅"};
-        int[] employeeCounts = {28, 24, 20};
-        for (int i = 0; i < employees.length; i++) {
-            java.util.Map<String, Object> item = new java.util.HashMap<>();
-            item.put("id", i + 1);
-            item.put("name", employees[i]);
-            item.put("count", employeeCounts[i]);
-            item.put("revenue", employeeCounts[i] * 29);
-            employeeRanking.add(item);
-        }
+        java.util.Map<Long, java.util.Map<String, Object>> employeeStats = new java.util.HashMap<>();
+        
+        orderService.list(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<com.xiyiji.modules.order.entity.Order>()
+                .eq(com.xiyiji.modules.order.entity.Order::getStatus, 3))
+                .forEach(order -> {
+                    Long empId = order.getEmployeeId();
+                    if (empId != null) {
+                        employeeStats.computeIfAbsent(empId, id -> {
+                            java.util.Map<String, Object> stats = new java.util.HashMap<>();
+                            stats.put("id", id);
+                            stats.put("name", "员工" + id);
+                            stats.put("count", 0L);
+                            stats.put("revenue", 0.0);
+                            return stats;
+                        });
+                        java.util.Map<String, Object> stats = employeeStats.get(empId);
+                        stats.put("count", (Long) stats.get("count") + 1);
+                        stats.put("revenue", (Double) stats.get("revenue") + 29.9);
+                    }
+                });
+        
+        employeeStats.values().stream()
+                .sorted((a, b) -> Long.compare((Long) b.get("count"), (Long) a.get("count")))
+                .limit(5)
+                .forEach(employeeRanking::add);
         result.put("employeeRanking", employeeRanking);
         
         return R.success(result);

@@ -148,6 +148,8 @@
         </div>
       </div>
     </div>
+    
+    <AdminNav />
   </div>
 </template>
 
@@ -155,6 +157,7 @@
 import { ref, onMounted } from 'vue'
 import { showLoadingToast, closeToast } from 'vant'
 import { get } from '../../utils/request'
+import AdminNav from '../../components/AdminNav.vue'
 
 const dateRange = ref('week')
 const loading = ref(false)

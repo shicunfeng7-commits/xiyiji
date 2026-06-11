@@ -29,49 +29,86 @@
       <van-field v-model="newPhone" label="手机号" placeholder="请输入手机号" />
       <van-field v-model="newAccount" label="账号" placeholder="请输入登录账号" />
     </van-dialog>
+    
+    <AdminNav />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { showToast, showConfirmDialog } from 'vant'
+import { ref, onMounted } from 'vue'
+import { showToast, showConfirmDialog, showLoadingToast, closeToast } from 'vant'
+import { get, post, deleteRequest } from '../../utils/request'
+import AdminNav from '../../components/AdminNav.vue'
 
 const showAdd = ref(false)
 const newName = ref('')
 const newPhone = ref('')
 const newAccount = ref('')
 
-const employees = ref([
-  { id: 1, name: '陈师傅', phone: '138****1234', status: 'free', account: 'chen001' },
-  { id: 2, name: '刘师傅', phone: '139****5678', status: 'busy', account: 'liu002' },
-  { id: 3, name: '张师傅', phone: '137****9012', status: 'free', account: 'zhang003' },
-])
+const employees = ref<any[]>([])
 
-function addEmployee() {
-  if (newName.value && newPhone.value) {
-    employees.value.push({
-      id: Date.now(),
-      name: newName.value,
-      phone: newPhone.value,
-      status: 'free',
-      account: newAccount.value,
-    })
-    newName.value = ''
-    newPhone.value = ''
-    newAccount.value = ''
-    showToast('添加成功')
+async function loadEmployees() {
+  showLoadingToast({ message: '加载中...' })
+  try {
+    const res = await get<{ code: number; data: any[] }>('/api/admin/employees')
+    if (res.data.code === 200) {
+      employees.value = res.data.data.map(item => ({
+        id: item.id,
+        name: item.name || '未知',
+        phone: item.phone ? item.phone.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2') : '',
+        status: 'free',
+        account: '',
+      }))
+    }
+  } catch (error) {
+    showToast('加载失败')
+  } finally {
+    closeToast()
   }
 }
 
-function removeEmp(emp: any) {
+async function addEmployee() {
+  if (!newName.value || !newPhone.value) {
+    showToast('请填写姓名和手机号')
+    return
+  }
+  try {
+    const res = await post<{ code: number }>('/api/admin/employee/add', {
+      name: newName.value,
+      phone: newPhone.value,
+    })
+    if (res.data.code === 200) {
+      showToast('添加成功')
+      newName.value = ''
+      newPhone.value = ''
+      newAccount.value = ''
+      loadEmployees()
+    }
+  } catch (error) {
+    showToast('添加失败')
+  }
+}
+
+async function removeEmp(emp: any) {
   showConfirmDialog({
     title: '移除员工',
     message: `确定移除 ${emp.name} 吗？`,
-  }).then(() => {
-    employees.value = employees.value.filter(e => e.id !== emp.id)
-    showToast('已移除')
+  }).then(async () => {
+    try {
+      const res = await deleteRequest<{ code: number }>(`/api/admin/employee/${emp.id}`)
+      if (res.data.code === 200) {
+        employees.value = employees.value.filter(e => e.id !== emp.id)
+        showToast('已移除')
+      }
+    } catch (error) {
+      showToast('移除失败')
+    }
   })
 }
+
+onMounted(() => {
+  loadEmployees()
+})
 </script>
 
 <style scoped>

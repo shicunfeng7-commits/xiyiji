@@ -48,7 +48,7 @@
       </div>
 
       <div v-if="list.length === 0" class="empty-state">
-        <van-icon name="info-o" size="48" color="#C7C7CC" />
+        <van-icon name="file-o" size="48" color="#C7C7CC" />
         <p>暂无数据</p>
       </div>
     </div>
@@ -62,6 +62,8 @@
         :rules="[{ required: true, message: '请输入拒绝原因' }]"
       />
     </van-dialog>
+    
+    <AdminNav />
   </div>
 </template>
 
@@ -69,6 +71,7 @@
 import { ref } from 'vue'
 import { showToast, showDialog } from 'vant'
 import { get, post } from '../../utils/request'
+import AdminNav from '../../components/AdminNav.vue'
 
 const tabs = [
   { key: 'pending', label: '待审核' },
@@ -133,7 +136,6 @@ function doReject() {
   })
 }
 
-// 初始加载
 fetchList()
 </script>
 
