@@ -54,7 +54,7 @@ public class AuthController {
             userInfo.put("id", admin.getId());
             userInfo.put("username", admin.getUsername());
             userInfo.put("name", admin.getName());
-            userInfo.put("role", 2);
+            userInfo.put("role", "admin");
             
             Map<String, Object> result = new HashMap<>();
             result.put("token", token);

@@ -41,11 +41,44 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     @Override
     @Transactional
     public Order createOrder(Order order) {
+        // 检查同一楼栋同一天是否有时间重叠的订单
+        if (hasTimeConflict(order)) {
+            throw new RuntimeException("该时间段已有订单，请选择其他时间");
+        }
+        
         order.setOrderNo(generateOrderNo());
         order.setStatus(OrderStatus.UNPAID);
         order.setAmount(java.math.BigDecimal.valueOf(29.90));
         save(order);
         return order;
+    }
+    
+    /**
+     * 检查是否存在时间冲突的订单
+     */
+    private boolean hasTimeConflict(Order newOrder) {
+        LambdaQueryWrapper<Order> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Order::getBuildingCategory, newOrder.getBuildingCategory())
+               .eq(Order::getBuildingName, newOrder.getBuildingName())
+               .eq(Order::getServiceDate, newOrder.getServiceDate())
+               .ne(Order::getStatus, OrderStatus.CANCELLED);
+        
+        List<Order> existingOrders = list(wrapper);
+        
+        String newStart = newOrder.getStartTime();
+        String newEnd = newOrder.getEndTime();
+        
+        for (Order order : existingOrders) {
+            String existingStart = order.getStartTime();
+            String existingEnd = order.getEndTime();
+            
+            // 时间重叠判断：新订单开始时间 < 现有订单结束时间 && 新订单结束时间 > 现有订单开始时间
+            if (newStart.compareTo(existingEnd) < 0 && newEnd.compareTo(existingStart) > 0) {
+                return true;
+            }
+        }
+        
+        return false;
     }
 
     @Override

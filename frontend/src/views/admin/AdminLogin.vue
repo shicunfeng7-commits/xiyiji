@@ -53,13 +53,14 @@ async function handleLogin() {
 
   loading.value = true
   try {
-    const res = await post<{ token: string; userInfo: object }>('/api/auth/admin/login', {
+    const res = await post<any>('/api/auth/admin/login', {
       username: username.value,
       password: password.value,
     })
-    setToken(res.data.token)
-    setUserInfo(res.data.userInfo)
-    router.replace('/admin/orders')
+    const { token, userInfo } = res.data.data
+    setToken(token)
+    setUserInfo(userInfo)
+    router.replace('/admin/dashboard')
   } catch {
     showToast('登录失败，请检查账号密码')
   } finally {
