@@ -64,6 +64,27 @@
       </div>
     </div>
 
+    <!-- 服务照片（清洗前后对比） -->
+    <div v-if="beforePhotos.length > 0 || afterPhotos.length > 0" class="photos-card">
+      <div class="card-header">
+        <span class="section-title">服务照片</span>
+      </div>
+      <div class="photos-compare">
+        <div class="photo-column" v-if="beforePhotos.length > 0">
+          <div class="photo-label">清洗前</div>
+          <div class="photo-stack">
+            <img v-for="(url, i) in beforePhotos" :key="'b'+i" :src="url" class="photo-img" @click="previewImage(url)" @error="onImgError" />
+          </div>
+        </div>
+        <div class="photo-column" v-if="afterPhotos.length > 0">
+          <div class="photo-label">清洗后</div>
+          <div class="photo-stack">
+            <img v-for="(url, i) in afterPhotos" :key="'a'+i" :src="url" class="photo-img" @click="previewImage(url)" @error="onImgError" />
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- 服务评价 -->
     <div v-if="order?.status === 3 && review" class="review-card">
       <div class="card-header">
@@ -137,6 +158,8 @@
         <button class="confirm-btn" @click="submitReview">提交评价</button>
       </template>
     </van-dialog>
+
+    <van-image-preview v-model:show="showPreview" :images="previewImages" />
   </div>
 </template>
 
@@ -157,6 +180,27 @@ const hasReview = ref(false)
 const showReviewModal = ref(false)
 const reviewScore = ref(5)
 const reviewContent = ref('')
+const beforePhotos = ref<string[]>([])
+const afterPhotos = ref<string[]>([])
+const showPreview = ref(false)
+const previewImages = ref<string[]>([])
+
+function onImgError(e: Event) {
+  (e.target as HTMLImageElement).style.display = 'none'
+}
+
+function previewImage(url: string) {
+  previewImages.value = [url]
+  showPreview.value = true
+}
+
+function parsePhotos(item: any) {
+  let b: string[] = [], a: string[] = []
+  try { if (item.beforePhoto) b = JSON.parse(item.beforePhoto) } catch { if (item.beforePhoto) b = [item.beforePhoto] }
+  try { if (item.afterPhoto) a = JSON.parse(item.afterPhoto) } catch { if (item.afterPhoto) a = [item.afterPhoto] }
+  beforePhotos.value = b
+  afterPhotos.value = a
+}
 
 const timelineSteps = [
   { status: 0, label: '订单创建', icon: 'circle-o' },
@@ -278,6 +322,7 @@ async function loadOrder() {
     const res = await get<{ code: number; data: any }>(`/api/user/order/detail/${orderId}`)
     if (res.data.code === 200) {
       order.value = res.data.data
+      parsePhotos(res.data.data)
     }
   } catch (error) {
     showToast('加载订单失败')
@@ -432,6 +477,46 @@ onMounted(() => {
 }
 
 /* ====== 订单信息 ====== */
+.photos-card {
+  background: white;
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.photos-compare {
+  display: flex;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.photo-column {
+  flex: 1;
+}
+
+.photo-label {
+  font-size: 13px;
+  color: #86868B;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.photo-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.photo-img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 10px;
+  background: #F5F5F7;
+  cursor: pointer;
+}
+.photo-img:active { opacity: 0.8; }
+
 .info-card {
   background: white;
   border-radius: 16px;

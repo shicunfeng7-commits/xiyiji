@@ -63,7 +63,6 @@
       />
     </van-dialog>
     
-    <AdminNav />
   </div>
 </template>
 
@@ -71,7 +70,6 @@
 import { ref } from 'vue'
 import { showToast, showDialog } from 'vant'
 import { get, post } from '../../utils/request'
-import AdminNav from '../../components/AdminNav.vue'
 
 const tabs = [
   { key: 'pending', label: '待审核' },

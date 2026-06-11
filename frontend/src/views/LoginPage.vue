@@ -73,10 +73,10 @@ async function handleLogin() {
     setToken(token)
     setUserInfo(user)
     
-    if (user.role === 'admin') {
+    if (user.role === 'admin' || user.role === 2) {
       router.replace('/admin/dashboard')
-    } else if (user.role === 'employee') {
-      router.replace('/user/home')
+    } else if (user.role === 'employee' || user.role === 1) {
+      router.replace('/employee/available')
     } else {
       router.replace('/user/home')
     }

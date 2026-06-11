@@ -30,15 +30,13 @@
       <van-field v-model="newAccount" label="账号" placeholder="请输入登录账号" />
     </van-dialog>
     
-    <AdminNav />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { showToast, showConfirmDialog, showLoadingToast, closeToast } from 'vant'
-import { get, post, deleteRequest } from '../../utils/request'
-import AdminNav from '../../components/AdminNav.vue'
+import { get, post, del } from '../../utils/request'
 
 const showAdd = ref(false)
 const newName = ref('')
@@ -95,7 +93,7 @@ async function removeEmp(emp: any) {
     message: `确定移除 ${emp.name} 吗？`,
   }).then(async () => {
     try {
-      const res = await deleteRequest<{ code: number }>(`/api/admin/employee/${emp.id}`)
+      const res = await del<{ code: number }>(`/api/admin/employee/${emp.id}`)
       if (res.data.code === 200) {
         employees.value = employees.value.filter(e => e.id !== emp.id)
         showToast('已移除')

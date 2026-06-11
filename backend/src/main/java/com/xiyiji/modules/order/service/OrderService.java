@@ -12,7 +12,7 @@ public interface OrderService extends IService<Order> {
     boolean revertPay(Long orderId);
     boolean grabOrder(Long orderId, Long employeeId);
     boolean startOrder(Long orderId, Long employeeId);
-    boolean completeOrder(Long orderId, Long employeeId);
+    boolean completeOrder(Long orderId, Long employeeId, String beforePhotosJson, String afterPhotosJson);
     List<Order> getAvailableOrders(); // 待抢单列表
     List<Order> getUserOrders(Long userId);
     List<Order> getEmployeeOrders(Long employeeId);

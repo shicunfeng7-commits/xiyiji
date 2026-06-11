@@ -69,7 +69,6 @@
       </div>
     </div>
     
-    <AdminNav />
   </div>
 </template>
 
@@ -77,7 +76,6 @@
 import { ref, computed, onMounted } from 'vue'
 import { showDialog, showToast, showLoadingToast, closeToast } from 'vant'
 import { post, get } from '../../utils/request'
-import AdminNav from '../../components/AdminNav.vue'
 
 const currentTab = ref('all')
 const sortType = ref('createTime')

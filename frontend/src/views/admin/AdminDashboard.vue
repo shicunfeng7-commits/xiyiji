@@ -2,10 +2,13 @@
   <div class="admin-dashboard">
     <div class="page-header">
       <h1 class="page-title">数据看板</h1>
-      <div class="date-range">
-        <van-dropdown-menu>
-          <van-dropdown-item :value="dateRange" :options="dateOptions" @change="handleDateChange" />
-        </van-dropdown-menu>
+      <div class="header-right">
+        <div class="date-range">
+          <van-dropdown-menu>
+            <van-dropdown-item :value="dateRange" :options="dateOptions" @change="handleDateChange" />
+          </van-dropdown-menu>
+        </div>
+        <span class="logout-btn" @click="handleLogout">退出</span>
       </div>
     </div>
 
@@ -149,15 +152,15 @@
       </div>
     </div>
     
-    <AdminNav />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { showLoadingToast, closeToast } from 'vant'
 import { get } from '../../utils/request'
-import AdminNav from '../../components/AdminNav.vue'
+import { removeAuth } from '../../utils/auth'
 
 const dateRange = ref('week')
 const loading = ref(false)
@@ -281,6 +284,13 @@ async function loadStats() {
   }
 }
 
+const router = useRouter()
+
+function handleLogout() {
+  removeAuth()
+  router.push('/login')
+}
+
 function handleDateChange(value: string) {
   dateRange.value = value
   loadStats()
@@ -294,7 +304,7 @@ onMounted(() => {
 <style scoped>
 .admin-dashboard {
   padding: 16px;
-  padding-bottom: 100px;
+  padding-bottom: 16px;
   background: #F5F5F7;
   min-height: 100vh;
 }
@@ -312,8 +322,26 @@ onMounted(() => {
   color: #1D1D1F;
 }
 
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .date-range {
-  width: 120px;
+  width: 100px;
+}
+
+.logout-btn {
+  font-size: 14px;
+  color: #FF3B30;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+.logout-btn:active {
+  background: rgba(255, 59, 48, 0.1);
 }
 
 /* ====== 统计卡片 ====== */

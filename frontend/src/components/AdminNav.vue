@@ -9,9 +9,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
 
-const currentPath = window.location.hash.replace('#', '')
+const route = useRoute()
 
 const navItems = [
   { path: '/admin/dashboard', label: '看板', icon: 'bar-chart-o' },
@@ -21,7 +22,14 @@ const navItems = [
 ]
 
 const active = computed(() => {
-  const index = navItems.findIndex(item => currentPath.startsWith(item.path))
-  return index >= 0 ? index : 0
+  let bestIndex = -1
+  let bestLen = 0
+  navItems.forEach((item, i) => {
+    if (route.path.startsWith(item.path) && item.path.length > bestLen) {
+      bestIndex = i
+      bestLen = item.path.length
+    }
+  })
+  return bestIndex >= 0 ? bestIndex : 0
 })
 </script>

@@ -30,9 +30,7 @@ public class ServiceTimeConfigServiceImpl extends ServiceImpl<ServiceTimeConfigM
         List<ServiceTimeConfig> configs = getEnabledConfigs();
         List<Integer> hours = new ArrayList<>();
         for (ServiceTimeConfig config : configs) {
-            int startHour = Integer.parseInt(config.getStartTime().split(":")[0]);
-            int endHour = Integer.parseInt(config.getEndTime().split(":")[0]);
-            for (int h = startHour; h < endHour; h++) {
+            for (int h = config.getStartHour(); h < config.getEndHour(); h++) {
                 hours.add(h);
             }
         }

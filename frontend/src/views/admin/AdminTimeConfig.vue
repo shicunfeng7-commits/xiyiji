@@ -104,7 +104,7 @@ onMounted(() => {
 
 <style scoped>
 .admin-time-config {
-  padding: 16px 16px 100px;
+  padding: 16px 16px 80px;
 }
 
 .page-title {

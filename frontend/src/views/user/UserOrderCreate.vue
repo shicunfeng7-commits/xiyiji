@@ -104,8 +104,9 @@
                   'is-start': tempStartTime === slot,
                   'is-end': tempEndTime === slot,
                   'in-range': tempStartTime && tempEndTime && isInRange(slot),
+                  'is-past': isPastSlot(slot),
                 }"
-                @click="selectTimeSlot(slot)"
+                @click="!isPastSlot(slot) && selectTimeSlot(slot)"
               >
                 <span class="tr-slot-label">{{ slot }}</span>
                 <span v-if="tempStartTime === slot" class="tr-badge start">起始</span>
@@ -241,6 +242,21 @@ const tempEndTime = ref('')
 const timeSlots = Array.from({ length: 24 }, (_, i) =>
   `${String(i).padStart(2, '0')}:00`
 )
+
+// 当天已过的时间段不可选
+const isToday = computed(() => {
+  if (!serviceDate.value) return false
+  const today = new Date()
+  const d = serviceDate.value.split('-').map(Number)
+  return d[0] === today.getFullYear() && d[1] === today.getMonth()+1 && d[2] === today.getDate()
+})
+
+const currentHour = new Date().getHours()
+
+function isPastSlot(slot: string): boolean {
+  if (!isToday.value) return false
+  return parseInt(slot) <= currentHour
+}
 
 const timeRangeDisplay = computed(() => {
   if (startTime.value && endTime.value) {
@@ -623,6 +639,13 @@ async function handleSubmit() {
   background: #2B95FF;
   color: white;
   box-shadow: 0 2px 6px rgba(43,149,255,0.3);
+}
+
+.tr-slot.is-past {
+  background: #F0F0F0;
+  color: #C7C7CC;
+  cursor: not-allowed;
+  pointer-events: none;
 }
 
 .tr-badge {

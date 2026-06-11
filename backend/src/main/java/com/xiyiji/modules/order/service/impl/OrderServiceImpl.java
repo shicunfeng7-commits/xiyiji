@@ -134,7 +134,8 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         wrapper.eq(Order::getId, orderId)
                .eq(Order::getStatus, OrderStatus.PAID)
                .isNull(Order::getEmployeeId)
-               .set(Order::getEmployeeId, employeeId);
+               .set(Order::getEmployeeId, employeeId)
+               .set(Order::getStatus, OrderStatus.IN_PROGRESS);
         boolean updated = update(wrapper);
         if (updated) {
             orderStatusLogService.log(orderId, fromStatus, OrderStatus.IN_PROGRESS, 2, employeeId);
@@ -170,9 +171,12 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
 
     @Override
     @Transactional
-    public boolean completeOrder(Long orderId, Long employeeId) {
+    public boolean completeOrder(Long orderId, Long employeeId, String beforePhotosJson, String afterPhotosJson) {
         Order order = getById(orderId);
         if (order == null || !employeeId.equals(order.getEmployeeId()) || order.getStatus() != OrderStatus.IN_PROGRESS) {
+            return false;
+        }
+        if (beforePhotosJson == null || afterPhotosJson == null || beforePhotosJson.isEmpty() || afterPhotosJson.isEmpty()) {
             return false;
         }
         int fromStatus = order.getStatus();
@@ -181,7 +185,9 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
                .eq(Order::getEmployeeId, employeeId)
                .eq(Order::getStatus, OrderStatus.IN_PROGRESS)
                .set(Order::getStatus, OrderStatus.COMPLETED)
-               .set(Order::getCompleteTime, LocalDateTime.now());
+               .set(Order::getCompleteTime, LocalDateTime.now())
+               .set(Order::getBeforePhoto, beforePhotosJson)
+               .set(Order::getAfterPhoto, afterPhotosJson);
         boolean updated = update(wrapper);
         if (updated) {
             orderStatusLogService.log(orderId, fromStatus, OrderStatus.COMPLETED, 2, employeeId);

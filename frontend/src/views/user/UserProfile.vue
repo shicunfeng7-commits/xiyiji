@@ -75,7 +75,6 @@
       </div>
     </van-dialog>
     
-    <BottomNav />
   </div>
 </template>
 
@@ -85,7 +84,6 @@ import { useRouter } from 'vue-router'
 import { showToast, showLoadingToast, closeToast } from 'vant'
 import { getUserInfo, removeAuth } from '../../utils/auth'
 import { get, post } from '../../utils/request'
-import BottomNav from '../../components/BottomNav.vue'
 
 interface UserInfo {
   phone?: string

@@ -154,7 +154,7 @@ function handleNotificationClick() {
 
 async function loadOrders() {
   try {
-    const res = await get<{ code: number; data: any[] }>('/api/employee/order/available')
+    const res = await get<{ code: number; data: any[] }>('/api/employee/orders/available')
     if (res.data.code === 200) {
       availableOrders.value = res.data.data.map((item: any) => {
         const buildingInfo = item.buildingName?.split(' · ') || ['', '']

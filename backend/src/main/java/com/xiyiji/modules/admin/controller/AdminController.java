@@ -13,6 +13,7 @@ import com.xiyiji.modules.order.service.OrderStatusLogService;
 import com.xiyiji.modules.system.entity.ServiceTimeConfig;
 import com.xiyiji.modules.system.service.ServiceTimeConfigService;
 import jakarta.annotation.Resource;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -29,6 +30,12 @@ public class AdminController {
 
     @Resource
     private EmployeeService employeeService;
+
+    @Resource
+    private com.xiyiji.modules.user.mapper.UserMapper userMapper;
+
+    @Resource
+    private com.xiyiji.modules.employee.mapper.EmployeeMapper employeeMapper;
 
     @Resource
     private ServiceTimeConfigService timeConfigService;
@@ -65,18 +72,57 @@ public class AdminController {
      * 获取所有订单（可按状态筛选和排序）
      */
     @GetMapping("/orders")
-    public R<List<Order>> getOrders(
+    public R<List<java.util.Map<String, Object>>> getOrders(
             @RequestParam(required = false) Integer status,
             @RequestParam(required = false, defaultValue = "createTime") String sort,
             @RequestParam(required = false, defaultValue = "desc") String order) {
-        return R.success(orderService.getAllOrders(status, sort, order));
+        List<Order> orders = orderService.getAllOrders(status, sort, order);
+        List<java.util.Map<String, Object>> result = new java.util.ArrayList<>();
+        for (Order o : orders) {
+            java.util.Map<String, Object> map = new java.util.HashMap<>();
+            map.put("id", o.getId());
+            map.put("orderNo", o.getOrderNo());
+            map.put("userId", o.getUserId());
+            map.put("buildingName", o.getBuildingName());
+            map.put("buildingCategory", o.getBuildingCategory());
+            map.put("roomNo", o.getRoomNo());
+            map.put("serviceDate", o.getServiceDate());
+            map.put("startTime", o.getStartTime());
+            map.put("endTime", o.getEndTime());
+            map.put("status", o.getStatus());
+            map.put("employeeId", o.getEmployeeId());
+            map.put("amount", o.getAmount());
+            map.put("remark", o.getRemark());
+            map.put("beforePhoto", o.getBeforePhoto());
+            map.put("afterPhoto", o.getAfterPhoto());
+            map.put("createTime", o.getCreateTime());
+            map.put("payTime", o.getPayTime());
+            map.put("completeTime", o.getCompleteTime());
+            // 管理员可看到用户手机号
+            if (o.getUserId() != null) {
+                com.xiyiji.modules.user.entity.User user = userMapper.selectById(o.getUserId());
+                map.put("userPhone", user != null ? user.getPhone() : null);
+            } else {
+                map.put("userPhone", null);
+            }
+            // 员工名
+            if (o.getEmployeeId() != null) {
+                com.xiyiji.modules.employee.entity.Employee emp = employeeMapper.selectById(o.getEmployeeId());
+                map.put("employeeName", emp != null ? emp.getName() : null);
+            } else {
+                map.put("employeeName", null);
+            }
+            result.add(map);
+        }
+        return R.success(result);
     }
 
     /**
      * 确认已支付
      */
     @PostMapping("/order/confirm-pay/{orderId}")
-    public R<Void> confirmPay(@PathVariable Long orderId, @RequestParam Long adminId) {
+    public R<Void> confirmPay(@PathVariable Long orderId, HttpServletRequest request) {
+        Long adminId = (Long) request.getAttribute("userId");
         boolean success = orderService.confirmPay(orderId, adminId);
         return success ? R.success() : R.error("确认失败，订单状态异常");
     }
@@ -121,19 +167,42 @@ public class AdminController {
     // ====== 服务时间段配置 ======
 
     /**
-     * 获取所有时间段配置
+     * 获取所有时间段配置（前端格式：{key, label, enabled, startTime, endTime}）
      */
-    @GetMapping("/time-configs")
-    public R<List<ServiceTimeConfig>> getTimeConfigs() {
-        return R.success(timeConfigService.list());
+    @GetMapping("/time-config/list")
+    public R<List<java.util.Map<String, Object>>> getTimeConfigList() {
+        List<ServiceTimeConfig> configs = timeConfigService.list();
+        List<java.util.Map<String, Object>> result = new java.util.ArrayList<>();
+        for (ServiceTimeConfig c : configs) {
+            java.util.Map<String, Object> item = new java.util.HashMap<>();
+            item.put("key", c.getPeriod().toLowerCase());
+            item.put("label", c.getPeriodName());
+            item.put("enabled", c.getEnabled());
+            item.put("startTime", String.format("%02d:00", c.getStartHour()));
+            item.put("endTime", String.format("%02d:00", c.getEndHour()));
+            result.add(item);
+        }
+        return R.success(result);
     }
 
     /**
-     * 更新时间段配置
+     * 批量更新时间段配置
      */
     @PutMapping("/time-config/update")
-    public R<Void> updateTimeConfig(@RequestBody ServiceTimeConfig config) {
-        timeConfigService.updateConfig(config);
+    public R<Void> updateTimeConfigs(@RequestBody List<java.util.Map<String, Object>> configs) {
+        for (java.util.Map<String, Object> item : configs) {
+            String key = ((String) item.get("key")).toUpperCase();
+            ServiceTimeConfig entity = timeConfigService.lambdaQuery()
+                    .eq(ServiceTimeConfig::getPeriod, key).one();
+            if (entity != null) {
+                entity.setEnabled((Boolean) item.get("enabled"));
+                String startTime = (String) item.get("startTime");
+                String endTime = (String) item.get("endTime");
+                entity.setStartHour(Integer.parseInt(startTime.split(":")[0]));
+                entity.setEndHour(Integer.parseInt(endTime.split(":")[0]));
+                timeConfigService.updateConfig(entity);
+            }
+        }
         return R.success();
     }
 
@@ -143,8 +212,9 @@ public class AdminController {
      * 订单回退支付（PAID -> UNPAID）
      */
     @PostMapping("/order/revert-pay/{id}")
-    public R<Void> revertPay(@PathVariable Long id, @RequestParam Long adminId) {
+    public R<Void> revertPay(@PathVariable Long id, HttpServletRequest request) {
         try {
+            Long adminId = (Long) request.getAttribute("userId");
             boolean success = adminService.revertPay(id, adminId);
             return success ? R.success() : R.error("回退失败，订单状态异常");
         } catch (RuntimeException e) {
@@ -166,7 +236,8 @@ public class AdminController {
      * 通过员工申请
      */
     @PostMapping("/employee/approve/{id}")
-    public R<Void> approveApplication(@PathVariable Long id, @RequestParam Long adminId) {
+    public R<Void> approveApplication(@PathVariable Long id, HttpServletRequest request) {
+        Long adminId = (Long) request.getAttribute("userId");
         boolean success = adminService.approveApplication(id, adminId);
         return success ? R.success() : R.error("审核失败，申请状态异常");
     }
@@ -175,8 +246,9 @@ public class AdminController {
      * 拒绝员工申请
      */
     @PostMapping("/employee/reject/{id}")
-    public R<Void> rejectApplication(@PathVariable Long id, @RequestParam Long adminId,
-                                     @RequestParam String remark) {
+    public R<Void> rejectApplication(@PathVariable Long id, @RequestParam String remark,
+                                     HttpServletRequest request) {
+        Long adminId = (Long) request.getAttribute("userId");
         boolean success = adminService.rejectApplication(id, adminId, remark);
         return success ? R.success() : R.error("操作失败，申请状态异常");
     }
@@ -266,6 +338,11 @@ public class AdminController {
         java.util.List<java.util.Map<String, Object>> employeeRanking = new java.util.ArrayList<>();
         java.util.Map<Long, java.util.Map<String, Object>> employeeStats = new java.util.HashMap<>();
         
+        java.util.Map<Long, String> employeeNameMap = new java.util.HashMap<>();
+        employeeService.list().forEach(emp -> {
+            employeeNameMap.put(emp.getId(), emp.getName());
+        });
+        
         orderService.list(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<com.xiyiji.modules.order.entity.Order>()
                 .eq(com.xiyiji.modules.order.entity.Order::getStatus, 3))
                 .forEach(order -> {
@@ -274,14 +351,14 @@ public class AdminController {
                         employeeStats.computeIfAbsent(empId, id -> {
                             java.util.Map<String, Object> stats = new java.util.HashMap<>();
                             stats.put("id", id);
-                            stats.put("name", "员工" + id);
+                            stats.put("name", employeeNameMap.getOrDefault(id, "员工" + id));
                             stats.put("count", 0L);
                             stats.put("revenue", 0.0);
                             return stats;
                         });
                         java.util.Map<String, Object> stats = employeeStats.get(empId);
                         stats.put("count", (Long) stats.get("count") + 1);
-                        stats.put("revenue", (Double) stats.get("revenue") + 29.9);
+                        stats.put("revenue", (Double) stats.get("revenue") + order.getAmount().doubleValue());
                     }
                 });
         

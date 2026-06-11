@@ -15,6 +15,14 @@
             <van-icon name="clock-o" size="14" color="#86868B" />
             <span>{{ order.serviceDate }} {{ order.startTime }} ~ {{ order.endTime }}</span>
           </div>
+          <div class="info-row" v-if="order.employeeName">
+            <van-icon name="contact-o" size="14" color="#86868B" />
+            <span>服务员工：{{ order.employeeName }}</span>
+          </div>
+          <div class="info-row photo-indicator" v-if="order.hasPhotos">
+            <van-icon name="photograph" size="14" color="#34C759" />
+            <span>已有服务照片</span>
+          </div>
         </div>
         <div class="order-bottom">
           <span class="order-amount">¥{{ order.amount }}</span>
@@ -34,7 +42,6 @@
       </div>
     </div>
     
-    <BottomNav />
   </div>
 </template>
 
@@ -43,7 +50,6 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { showToast, showLoadingToast, closeToast } from 'vant'
 import { get } from '../../utils/request'
-import BottomNav from '../../components/BottomNav.vue'
 
 const router = useRouter()
 const orders = ref<any[]>([])
@@ -75,6 +81,8 @@ async function loadOrders() {
         status: item.status,
         statusText: statusMap[item.status]?.text || '未知',
         statusClass: statusMap[item.status]?.class || 'status-default',
+        employeeName: item.employeeName || null,
+        hasPhotos: !!(item.beforePhoto || item.afterPhoto),
       }))
     }
   } catch (error) {

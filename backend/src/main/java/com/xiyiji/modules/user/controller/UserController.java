@@ -1,7 +1,9 @@
 package com.xiyiji.modules.user.controller;
 
 import com.xiyiji.common.result.R;
+import com.xiyiji.modules.employee.entity.Employee;
 import com.xiyiji.modules.employee.entity.EmployeeApplication;
+import com.xiyiji.modules.employee.service.EmployeeService;
 import com.xiyiji.modules.order.entity.Order;
 import com.xiyiji.modules.order.service.OrderService;
 import com.xiyiji.modules.system.entity.ServiceTimeConfig;
@@ -31,6 +33,9 @@ public class UserController {
 
     @Resource
     private AdminService adminService;
+
+    @Resource
+    private EmployeeService employeeService;
 
     @Resource
     private HttpServletRequest request;
@@ -99,12 +104,39 @@ public class UserController {
     }
 
     /**
-     * 我的订单列表
+     * 我的订单列表（含员工姓名）
      */
     @GetMapping("/order/list")
-    public R<List<Order>> getOrders() {
+    public R<List<java.util.Map<String, Object>>> getOrders() {
         Long userId = (Long) request.getAttribute("userId");
-        return R.success(orderService.getUserOrders(userId));
+        java.util.List<Order> orders = orderService.getUserOrders(userId);
+        java.util.List<java.util.Map<String, Object>> result = new java.util.ArrayList<>();
+        for (Order o : orders) {
+            java.util.Map<String, Object> map = new java.util.HashMap<>();
+            map.put("id", o.getId());
+            map.put("orderNo", o.getOrderNo());
+            map.put("buildingName", o.getBuildingName());
+            map.put("roomNo", o.getRoomNo());
+            map.put("serviceDate", o.getServiceDate());
+            map.put("startTime", o.getStartTime());
+            map.put("endTime", o.getEndTime());
+            map.put("status", o.getStatus());
+            map.put("amount", o.getAmount());
+            map.put("remark", o.getRemark());
+            map.put("createTime", o.getCreateTime());
+            map.put("payTime", o.getPayTime());
+            map.put("completeTime", o.getCompleteTime());
+            map.put("beforePhoto", o.getBeforePhoto());
+            map.put("afterPhoto", o.getAfterPhoto());
+            if (o.getEmployeeId() != null) {
+                com.xiyiji.modules.employee.entity.Employee emp = employeeService.getById(o.getEmployeeId());
+                map.put("employeeName", emp != null ? emp.getName() : "未知");
+            } else {
+                map.put("employeeName", null);
+            }
+            result.add(map);
+        }
+        return R.success(result);
     }
 
     /**

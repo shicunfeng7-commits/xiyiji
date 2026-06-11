@@ -27,6 +27,8 @@ public class Order {
     private Long employeeId;
     private BigDecimal amount;
     private String remark;
+    private String beforePhoto;
+    private String afterPhoto;
     private LocalDateTime createTime;
     private LocalDateTime payTime;
     private LocalDateTime completeTime;
