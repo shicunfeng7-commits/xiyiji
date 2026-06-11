@@ -69,28 +69,33 @@ public class UserController {
      */
     @PostMapping("/order/create")
     public R<Order> createOrder(@RequestBody Order order) {
-        Long userId = (Long) request.getAttribute("userId");
-        order.setUserId(userId);
-        Order created = orderService.createOrder(order);
-        
-        // 推送新订单通知给员工端
-        java.util.Map<String, Object> message = new java.util.HashMap<>();
-        message.put("type", "NEW_ORDER");
-        message.put("orderId", created.getId());
-        message.put("orderNo", created.getOrderNo());
-        message.put("buildingName", created.getBuildingName());
-        message.put("roomNo", created.getRoomNo());
-        message.put("serviceDate", created.getServiceDate());
-        message.put("startTime", created.getStartTime());
-        message.put("endTime", created.getEndTime());
-        message.put("amount", created.getAmount());
-        message.put("createTime", java.time.LocalDateTime.now().toString());
-        
-        com.xiyiji.common.websocket.EmployeeWebSocketServer.broadcastNewOrder(
-            new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(message)
-        );
-        
-        return R.success(created);
+        try {
+            Long userId = (Long) request.getAttribute("userId");
+            order.setUserId(userId);
+            Order created = orderService.createOrder(order);
+            
+            // 推送新订单通知给员工端
+            java.util.Map<String, Object> message = new java.util.HashMap<>();
+            message.put("type", "NEW_ORDER");
+            message.put("orderId", created.getId());
+            message.put("orderNo", created.getOrderNo());
+            message.put("buildingName", created.getBuildingName());
+            message.put("roomNo", created.getRoomNo());
+            message.put("serviceDate", created.getServiceDate() != null ? created.getServiceDate().toString() : "");
+            message.put("startTime", created.getStartTime());
+            message.put("endTime", created.getEndTime());
+            message.put("amount", created.getAmount() != null ? created.getAmount().doubleValue() : 0);
+            message.put("createTime", java.time.LocalDateTime.now().toString());
+            
+            com.xiyiji.common.websocket.EmployeeWebSocketServer.broadcastNewOrder(
+                new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(message)
+            );
+            
+            return R.success(created);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return R.error("订单创建失败: " + e.getMessage());
+        }
     }
 
     /**

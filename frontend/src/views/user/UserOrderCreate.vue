@@ -314,6 +314,7 @@ async function handleSubmit() {
   showLoadingToast({ message: '提交中...' })
   try {
     const res = await post<{ code: number; data: { id: number } }>('/api/user/order/create', {
+      buildingCategory: selectedCategory.value,
       buildingName: `${currentCategoryLabel.value} · ${buildingName.value}`,
       roomNo: roomNo.value,
       serviceDate: serviceDate.value,
