@@ -57,12 +57,24 @@ async function handleLogin() {
       username: username.value,
       password: password.value,
     })
+    // 检查业务状态码
+    if (res.data.code !== 200) {
+      showToast(res.data.msg || '登录失败')
+      return
+    }
     const { token, userInfo } = res.data.data
     setToken(token)
     setUserInfo(userInfo)
+    showToast('登录成功')
     router.replace('/admin/dashboard')
-  } catch {
-    showToast('登录失败，请检查账号密码')
+  } catch (e: any) {
+    if (e.response?.status === 401) {
+      showToast('账号或密码错误')
+    } else if (e.response?.data?.msg) {
+      showToast(e.response.data.msg)
+    } else {
+      showToast('网络异常，请稍后重试')
+    }
   } finally {
     loading.value = false
   }

@@ -10,6 +10,8 @@ import com.xiyiji.modules.system.entity.ServiceTimeConfig;
 import com.xiyiji.modules.system.service.ServiceTimeConfigService;
 import com.xiyiji.modules.admin.entity.Admin;
 import com.xiyiji.modules.admin.service.AdminService;
+import com.xiyiji.modules.order.entity.OrderStatusLog;
+import com.xiyiji.modules.order.service.OrderStatusLogService;
 import com.xiyiji.modules.user.entity.User;
 import com.xiyiji.modules.user.service.UserService;
 import jakarta.annotation.Resource;
@@ -38,6 +40,9 @@ public class UserController {
     private EmployeeService employeeService;
 
     @Resource
+    private OrderStatusLogService orderStatusLogService;
+
+    @Resource
     private HttpServletRequest request;
 
     /**
@@ -53,7 +58,7 @@ public class UserController {
         userInfo.put("id", user.getId());
         userInfo.put("phone", user.getPhone());
         userInfo.put("nickname", user.getNickname());
-        userInfo.put("role", user.getRole());
+        userInfo.put("role", user.getRole() != null && user.getRole() == 1 ? "employee" : "user");
         
         java.util.Map<String, Object> result = new java.util.HashMap<>();
         result.put("token", token);
@@ -234,5 +239,13 @@ public class UserController {
             result.put("message", "");
         }
         return R.success(result);
+    }
+
+    /**
+     * 获取订单操作日志（用户端）
+     */
+    @GetMapping("/order/logs/{orderId}")
+    public R<List<OrderStatusLog>> getOrderLogs(@PathVariable Long orderId) {
+        return R.success(orderStatusLogService.getOrderLogs(orderId));
     }
 }

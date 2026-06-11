@@ -34,8 +34,14 @@ export function isLoggedIn(): boolean {
 
 export function getUserId(): number | null {
   const info = getUserInfo() as Record<string, unknown> | null
-  if (info && typeof info.userId === 'number') {
-    return info.userId
-  }
+  if (!info) return null
+  return (typeof info.id === 'number' ? info.id : null) as number | null
+}
+
+export function getRole(): string | null {
+  const info = getUserInfo() as Record<string, unknown> | null
+  if (!info) return null
+  const role = info.role
+  if (role === 'user' || role === 'employee' || role === 'admin') return role as string
   return null
 }

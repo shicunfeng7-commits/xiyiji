@@ -58,7 +58,7 @@ public class AdminController {
             userInfo.put("id", admin.getId());
             userInfo.put("username", admin.getUsername());
             userInfo.put("name", admin.getName());
-            userInfo.put("role", 2);
+            userInfo.put("role", "admin");
             
             java.util.Map<String, Object> result = new java.util.HashMap<>();
             result.put("token", token);

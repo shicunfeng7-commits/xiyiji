@@ -1,5 +1,5 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
-import { getToken, getUserInfo } from '../utils/auth'
+import { getToken, getRole } from '../utils/auth'
 
 const routes = [
   { path: '/', redirect: '/login' },
@@ -34,16 +34,6 @@ const router = createRouter({
   history: createWebHashHistory(),
   routes,
 })
-
-function getRole(): string | null {
-  const userInfo = getUserInfo() as Record<string, unknown> | null
-  if (!userInfo) return null
-  const role = userInfo.role as number | string | undefined
-  if (role === 0 || role === 'user') return 'user'
-  if (role === 1 || role === 'employee') return 'employee'
-  if (role === 2 || role === 'admin') return 'admin'
-  return null
-}
 
 // 路由守卫
 router.beforeEach((to, from, next) => {

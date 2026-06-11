@@ -335,7 +335,7 @@ async function loadOrder() {
 async function loadLogs() {
   try {
     const orderId = route.query.id
-    const res = await get<{ code: number; data: any[] }>(`/api/admin/order/logs/${orderId}`)
+    const res = await get<{ code: number; data: any[] }>(`/api/user/order/logs/${orderId}`)
     if (res.data.code === 200) {
       logs.value = res.data.data
     }

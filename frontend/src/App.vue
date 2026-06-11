@@ -31,7 +31,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getToken, getUserInfo, removeAuth } from './utils/auth'
+import { getToken, getRole, removeAuth } from './utils/auth'
 import { showToast as vantToast } from 'vant'
 
 const route = useRoute()
@@ -62,16 +62,9 @@ const tabsConfig: Record<string, TabConfig[]> = {
 }
 
 const userRole = computed(() => {
+  // route.path 用于触发路由变化时的重新计算
   void route.path
-  const token = getToken()
-  if (!token) return 'guest'
-  const userInfo = getUserInfo() as Record<string, unknown> | null
-  if (!userInfo) return 'guest'
-  const role = userInfo.role as number | string | undefined
-  if (role === 0 || role === 'user') return 'user'
-  if (role === 1 || role === 'employee') return 'employee'
-  if (role === 2 || role === 'admin') return 'admin'
-  return 'guest'
+  return getRole() || 'guest'
 })
 
 const tabs = computed(() => tabsConfig[userRole.value] || tabsConfig.guest)

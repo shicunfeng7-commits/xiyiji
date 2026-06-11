@@ -42,10 +42,12 @@ public class AuthService {
         userInfo.put("avatar", user.getAvatar());
         userInfo.put("buildingName", user.getBuildingName());
         userInfo.put("roomNo", user.getRoomNo());
-        userInfo.put("role", user.getRole());
+        // 统一返回 String 类型: "user" / "employee"
+        String roleStr = user.getRole() != null && user.getRole() == 1 ? "employee" : "user";
+        userInfo.put("role", roleStr);
 
         // 如果 role=1（员工），查询 employee 表获取员工信息
-        if (user.getRole() == 1) {
+        if (user.getRole() != null && user.getRole() == 1) {
             Employee employee = employeeMapper.selectOne(
                     new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<Employee>()
                             .eq(Employee::getUserId, user.getId())

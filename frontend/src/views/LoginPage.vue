@@ -54,7 +54,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { showToast } from 'vant'
 import { post, put } from '../utils/request'
-import { setToken, setUserInfo } from '../utils/auth'
+import { setToken, setUserInfo, getRole } from '../utils/auth'
 
 const router = useRouter()
 const phone = ref('')
@@ -120,9 +120,9 @@ async function handleSetupConfirm() {
 }
 
 function redirectByRole() {
-  const role = pendingUser?.role
-  if (role === 'admin' || role === 2) router.replace('/admin/dashboard')
-  else if (role === 'employee' || role === 1) router.replace('/employee/available')
+  const role = getRole()
+  if (role === 'admin') router.replace('/admin/dashboard')
+  else if (role === 'employee') router.replace('/employee/available')
   else router.replace('/user/home')
 }
 
