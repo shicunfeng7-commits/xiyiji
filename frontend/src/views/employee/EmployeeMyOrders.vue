@@ -92,21 +92,17 @@
     <!-- 文件选择器 -->
     <input ref="cameraInput" type="file" accept="image/*" capture="environment" style="display:none" @change="onFileSelected" />
     <input ref="galleryInput" type="file" accept="image/*" style="display:none" @change="onFileSelected" />
-
-    <!-- 图片预览 -->
-    <van-image-preview v-model:show="showPreview" :images="previewImages" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { showToast } from 'vant'
+import { showToast, showImagePreview } from 'vant'
 import { get, post } from '../../utils/request'
 
 const myOrders = ref<any[]>([])
 const loading = ref(true)
 const showPhotoSheet = ref(false)
-const showPreview = ref(false)
 const previewImages = ref<string[]>([])
 const cameraInput = ref<HTMLInputElement | null>(null)
 const galleryInput = ref<HTMLInputElement | null>(null)
@@ -172,8 +168,7 @@ function removePhoto(order: any, type: 'before' | 'after', index: number) {
 }
 
 function previewImage(url: string) {
-  previewImages.value = [url]
-  showPreview.value = true
+  showImagePreview({ images: [url] })
 }
 
 async function loadOrders() {

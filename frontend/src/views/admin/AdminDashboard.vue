@@ -100,7 +100,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { showLoadingToast, closeToast } from 'vant'
+import { showLoadingToast, closeToast, showDialog } from 'vant'
 import { get } from '../../utils/request'
 import { removeAuth } from '../../utils/auth'
 
@@ -125,7 +125,19 @@ const buildingRanking = ref<any[]>([])
 
 function switchRange(key: string) { dateRange.value = key; loadData() }
 
-function handleLogout() { removeAuth(); router.push('/login') }
+function handleLogout() {
+  showDialog({
+    title: '确认退出',
+    message: '确定要退出登录吗？',
+    confirmButtonText: '确认',
+    cancelButtonText: '取消',
+  }).then(() => {
+    removeAuth()
+    router.push('/user/home')
+  }).catch(() => {
+    // 取消，不做操作
+  })
+}
 
 async function loadData() {
   showLoadingToast({ message: '加载中...', forbidClick: true })

@@ -19,13 +19,27 @@ request.interceptors.request.use(
   (error) => Promise.reject(error),
 )
 
-// 响应拦截器：401 自动登出并跳转
+// 响应拦截器：401 处理
 request.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && error.response.status === 401) {
-      removeAuth()
-      router.push('/login')
+      // /api/user/profile 是 token 验证接口，401 时不自动清除 token
+      // 让调用方（checkAuth）自己决定如何处理
+      const url = error.config?.url || ''
+      if (url.includes('/api/user/profile')) {
+        return Promise.reject(error)
+      }
+      
+      // 其他接口 401，清除 token 并跳转
+      const currentPath = window.location.hash.replace('#', '') || ''
+      const guestPages = ['/user/home', '/user/orders', '/user/order/create', '/user/order/pay', '/user/order/detail', '/user/profile']
+      const isGuestPage = guestPages.some(p => currentPath.startsWith(p))
+      
+      if (!isGuestPage) {
+        removeAuth()
+        router.push('/user/profile')
+      }
     }
     return Promise.reject(error)
   },

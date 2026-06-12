@@ -61,6 +61,7 @@ CREATE TABLE IF NOT EXISTS `orders` (
     `building_category` VARCHAR(20) NOT NULL COMMENT '楼栋分类（食宿楼/学生宿舍/教师公寓）',
     `building_name` VARCHAR(20) NOT NULL,
     `room_no` VARCHAR(20) NOT NULL,
+    `contact_phone` VARCHAR(20) DEFAULT NULL,
     `service_date` DATE DEFAULT NULL,
     `start_time` VARCHAR(10) DEFAULT NULL,
     `end_time` VARCHAR(10) DEFAULT NULL,

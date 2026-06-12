@@ -20,6 +20,7 @@ public class Order {
     private String buildingCategory;
     private String buildingName;
     private String roomNo;
+    private String contactPhone;
     private LocalDate serviceDate;
     private String startTime;
     private String endTime;

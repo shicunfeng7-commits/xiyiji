@@ -1,5 +1,11 @@
 <template>
   <div class="order-pay">
+    <!-- 加载中 -->
+    <div v-if="!order" class="loading-container">
+      <van-loading size="24px" color="#2B95FF" vertical>加载中...</van-loading>
+    </div>
+
+    <template v-else>
     <div class="success-hero">
       <div class="check-circle">
         <van-icon name="passed" size="36" color="white" />
@@ -67,6 +73,7 @@
     </div>
 
     <button class="view-btn" @click="router.push('/user/orders')">查看我的订单</button>
+    </template>
   </div>
 </template>
 
@@ -87,8 +94,12 @@ onMounted(async () => {
       const res = await get<{ code: number; data: any }>(`/api/user/order/detail/${orderId}`)
       if (res.data.code === 200) {
         order.value = res.data.data
+      } else {
+        showToast('订单不存在')
       }
-    } catch { /* ignore */ }
+    } catch {
+      showToast('加载订单失败')
+    }
   }
 })
 
@@ -105,6 +116,14 @@ function copyOrderNo() {
 
 <style scoped>
 .order-pay { padding: 24px 16px 100px; text-align: center; min-height: 100vh; background: #F5F5F7; }
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 120px 0;
+}
 
 .success-hero { margin-bottom: 24px; }
 

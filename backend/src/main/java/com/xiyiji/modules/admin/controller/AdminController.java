@@ -87,6 +87,7 @@ public class AdminController {
             map.put("buildingName", o.getBuildingName());
             map.put("buildingCategory", o.getBuildingCategory());
             map.put("roomNo", o.getRoomNo());
+            map.put("contactPhone", o.getContactPhone());
             map.put("serviceDate", o.getServiceDate());
             map.put("startTime", o.getStartTime());
             map.put("endTime", o.getEndTime());

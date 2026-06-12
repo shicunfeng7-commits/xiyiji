@@ -2,10 +2,10 @@ import { createRouter, createWebHashHistory } from 'vue-router'
 import { getToken, getRole } from '../utils/auth'
 
 const routes = [
-  { path: '/', redirect: '/login' },
+  { path: '/', redirect: '/user/home' },
 
-  // 登录/角色选择
-  { path: '/login', name: 'LoginPage', component: () => import('../views/LoginPage.vue') },
+  // 登录已整合到个人中心
+  { path: '/login', redirect: '/user/home' },
 
   // 用户端
   { path: '/user/home', name: 'UserHome', component: () => import('../views/user/UserHome.vue') },
@@ -40,29 +40,33 @@ router.beforeEach((to, from, next) => {
   const token = getToken()
   const role = getRole()
 
-  // 登录页和根路径直接放行
-  if (to.path === '/login' || to.path === '/') {
-    next()
-    return
-  }
-
-  // 管理端登录页不需要验证角色
+  // 管理端登录页不需要验证
   if (to.path === '/admin/login') {
     next()
     return
   }
 
-  // 未登录，跳转到 /login
-  if (!token) {
-    next('/login')
+  // 游客可访问的用户端页面
+  const guestAllowed = [
+    '/user/home', '/user/orders', '/user/order/create', '/user/profile',
+    '/user/order/pay', '/user/order/detail'
+  ]
+  if (!token && guestAllowed.some(p => to.path.startsWith(p))) {
+    next()
     return
   }
 
-  // 管理员只能访问管理端页面
-  if (role === 'admin' && !to.path.startsWith('/admin/')) {
-    next('/admin/dashboard')
+  // 未登录，跳转到首页
+  if (!token) {
+    next('/user/home')
     return
   }
+
+  // 管理员只能访问管理端页面（不限制访问用户端页面）
+  // if (role === 'admin' && !to.path.startsWith('/admin/')) {
+  //   next('/admin/dashboard')
+  //   return
+  // }
 
   // 非管理员不能访问管理端页面
   if (role !== 'admin' && to.path.startsWith('/admin/')) {
@@ -70,8 +74,7 @@ router.beforeEach((to, from, next) => {
     return
   }
 
-  // 员工只能访问员工端页面和用户端页面（员工同时也是用户）
-  // 普通用户不能访问员工端页面
+  // 员工只能访问员工端页面和用户端页面
   if (role === 'user' && to.path.startsWith('/employee/')) {
     next('/user/home')
     return

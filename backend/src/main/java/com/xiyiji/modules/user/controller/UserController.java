@@ -124,6 +124,7 @@ public class UserController {
             map.put("orderNo", o.getOrderNo());
             map.put("buildingName", o.getBuildingName());
             map.put("roomNo", o.getRoomNo());
+            map.put("contactPhone", o.getContactPhone());
             map.put("serviceDate", o.getServiceDate());
             map.put("startTime", o.getStartTime());
             map.put("endTime", o.getEndTime());
@@ -195,6 +196,28 @@ public class UserController {
     public R<EmployeeApplication> getApplyStatus() {
         Long userId = (Long) request.getAttribute("userId");
         return R.success(userService.getApplyStatus(userId));
+    }
+
+    /**
+     * 获取个人信息
+     */
+    @GetMapping("/profile")
+    public R<Map<String, Object>> getProfile() {
+        Long userId = (Long) request.getAttribute("userId");
+        User user = userService.getById(userId);
+        if (user == null) return R.error("用户不存在");
+        
+        Map<String, Object> result = new java.util.HashMap<>();
+        result.put("id", user.getId());
+        result.put("phone", user.getPhone());
+        result.put("nickname", user.getNickname());
+        result.put("avatar", user.getAvatar());
+        result.put("buildingName", user.getBuildingName());
+        result.put("roomNo", user.getRoomNo());
+        result.put("role", user.getRole() != null && user.getRole() == 1 ? "employee" : "user");
+        result.put("createTime", user.getCreateTime());
+        result.put("updateTime", user.getUpdateTime());
+        return R.success(result);
     }
 
     /**

@@ -38,7 +38,17 @@
         <van-loading size="24px" />
       </div>
 
-      <div v-if="!loading && orders.length === 0" class="empty-state">
+      <!-- 未登录状态 -->
+      <div v-if="!loading && !logged" class="empty-state guest-state">
+        <van-icon name="lock" size="48" color="#C7C7CC" />
+        <p class="guest-title">登录后即可查看您的订单</p>
+        <p class="guest-desc">登录后可跟踪订单进度、查看历史记录</p>
+        <button class="order-now-btn" @click="router.push('/user/profile')">去登录</button>
+        <button class="order-now-btn secondary" @click="router.push('/user/order/create')">立即预约</button>
+      </div>
+
+      <!-- 已登录但无订单 -->
+      <div v-if="!loading && logged && orders.length === 0" class="empty-state">
         <van-icon name="records-o" size="48" color="#C7C7CC" />
         <p>暂无订单</p>
         <button class="order-now-btn" @click="router.push('/user/order/create')">去预约</button>
@@ -49,14 +59,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { showToast, showLoadingToast, closeToast } from 'vant'
 import { get, post } from '../../utils/request'
+import { isLoggedIn, getToken } from '../../utils/auth'
 
 const router = useRouter()
 const orders = ref<any[]>([])
 const loading = ref(true)
+const logged = ref(isLoggedIn())
 
 const statusMap: Record<number, { text: string; class: string }> = {
   0: { text: '未支付', class: 'status-unpaid' },
@@ -118,6 +130,14 @@ async function cancelOrder(order: any) {
 
 onMounted(() => {
   loadOrders()
+})
+
+// 监听路由变化，重新检查登录状态
+watch(() => router.currentRoute.value.path, () => {
+  logged.value = isLoggedIn()
+  if (logged.value) {
+    loadOrders()
+  }
 })
 </script>
 
@@ -271,6 +291,17 @@ onMounted(() => {
   margin: 12px 0 20px;
 }
 
+.guest-state .guest-title {
+  font-size: 16px;
+  color: #86868B;
+  margin: 12px 0 4px;
+}
+.guest-state .guest-desc {
+  font-size: 13px;
+  color: #C7C7CC;
+  margin: 0 0 20px;
+}
+
 .order-now-btn {
   padding: 12px 32px;
   background: #2B95FF;
@@ -280,5 +311,11 @@ onMounted(() => {
   font-size: 15px;
   font-weight: 600;
   cursor: pointer;
+}
+
+.order-now-btn.secondary {
+  margin-left: 12px;
+  background: #F5F5F7;
+  color: #86868B;
 }
 </style>

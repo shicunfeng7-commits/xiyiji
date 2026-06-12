@@ -155,10 +155,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { showToast, showLoadingToast, closeToast } from 'vant'
+import { showToast, showLoadingToast, closeToast, showDialog } from 'vant'
 import { post } from '../../utils/request'
+import { isLoggedIn } from '../../utils/auth'
 
 const router = useRouter()
 
@@ -318,6 +319,32 @@ const remark = ref('')
 // ---- 提交状态 ----
 const isSubmitting = ref(false)
 
+function collectFormData() {
+  return {
+    selectedCategory: selectedCategory.value,
+    buildingName: buildingName.value,
+    roomNo: roomNo.value,
+    contactPhone: contactPhone.value,
+    serviceDate: serviceDate.value,
+    startTime: startTime.value,
+    endTime: endTime.value,
+    remark: remark.value,
+  }
+}
+
+function restoreFormData(data: any) {
+  selectedCategory.value = data.selectedCategory
+  buildingName.value = data.buildingName
+  tempCategory.value = data.selectedCategory
+  tempBuilding.value = data.buildingName
+  roomNo.value = data.roomNo
+  contactPhone.value = data.contactPhone
+  serviceDate.value = data.serviceDate
+  startTime.value = data.startTime
+  endTime.value = data.endTime
+  remark.value = data.remark
+}
+
 // ---- 提交 ----
 async function handleSubmit() {
   if (isSubmitting.value) {
@@ -342,6 +369,29 @@ async function handleSubmit() {
     return
   }
 
+  // 检查登录状态
+  if (!isLoggedIn()) {
+    showDialog({
+      title: '请先登录',
+      message: '登录后即可享受订单跟踪、预约提醒等服务',
+      confirmButtonText: '去登录',
+      cancelButtonText: '暂不登录',
+    }).then(() => {
+      // 保存表单数据
+      sessionStorage.setItem('order_form_data', JSON.stringify(collectFormData()))
+      sessionStorage.setItem('order_redirect', 'true')
+      router.push('/user/profile')
+    }).catch(() => {
+      // 用户取消，留在当前页
+    })
+    return
+  }
+
+  // 已登录，执行提交
+  await doSubmit()
+}
+
+async function doSubmit() {
   isSubmitting.value = true
   showLoadingToast({ message: '提交中...' })
   try {
@@ -369,6 +419,23 @@ async function handleSubmit() {
     closeToast()
   }
 }
+
+onMounted(() => {
+  // 检查是否从登录页回跳
+  if (sessionStorage.getItem('order_redirect') === 'true') {
+    sessionStorage.removeItem('order_redirect')
+    const saved = sessionStorage.getItem('order_form_data')
+    if (saved) {
+      try {
+        const data = JSON.parse(saved)
+        restoreFormData(data)
+        sessionStorage.removeItem('order_form_data')
+        // 自动提交
+        setTimeout(() => { doSubmit() }, 300)
+      } catch { /* ignore parse error */ }
+    }
+  }
+})
 </script>
 
 <style scoped>

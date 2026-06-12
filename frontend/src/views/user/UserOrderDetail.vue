@@ -1,5 +1,19 @@
 <template>
   <div class="order-detail">
+    <!-- 加载中 -->
+    <div v-if="loading" class="loading-container">
+      <van-loading size="24px" color="#2B95FF" vertical>加载中...</van-loading>
+    </div>
+
+    <!-- 订单不存在 -->
+    <div v-else-if="!order" class="empty-container">
+      <van-icon name="records-o" size="48" color="#C7C7CC" />
+      <p class="empty-text">订单不存在</p>
+      <button class="back-btn" @click="router.push('/user/orders')">返回订单列表</button>
+    </div>
+
+    <!-- 订单详情内容 -->
+    <template v-else>
     <!-- 时间轴进度 -->
     <div class="timeline-section">
       <div class="timeline-title">订单进度</div>
@@ -158,15 +172,14 @@
         <button class="confirm-btn" @click="submitReview">提交评价</button>
       </template>
     </van-dialog>
-
-    <van-image-preview v-model:show="showPreview" :images="previewImages" />
+    </template>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { showToast, showLoadingToast, closeToast, showDialog } from 'vant'
+import { showToast, showLoadingToast, closeToast, showDialog, showImagePreview } from 'vant'
 import { get, post } from '../../utils/request'
 
 const route = useRoute()
@@ -182,16 +195,13 @@ const reviewScore = ref(5)
 const reviewContent = ref('')
 const beforePhotos = ref<string[]>([])
 const afterPhotos = ref<string[]>([])
-const showPreview = ref(false)
-const previewImages = ref<string[]>([])
 
 function onImgError(e: Event) {
   (e.target as HTMLImageElement).style.display = 'none'
 }
 
 function previewImage(url: string) {
-  previewImages.value = [url]
-  showPreview.value = true
+  showImagePreview({ images: [url] })
 }
 
 function parsePhotos(item: any) {
@@ -382,6 +392,30 @@ onMounted(() => {
   padding-bottom: 120px;
   background: #F5F5F7;
   min-height: 100vh;
+}
+
+/* ====== Loading / Empty ====== */
+.loading-container, .empty-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 0;
+}
+.empty-text {
+  font-size: 14px;
+  color: #C7C7CC;
+  margin: 12px 0 20px;
+}
+.back-btn {
+  padding: 12px 24px;
+  background: #2B95FF;
+  color: white;
+  border: none;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 /* ====== 时间轴 ====== */

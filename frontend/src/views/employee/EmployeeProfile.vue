@@ -186,8 +186,17 @@ function switchRange(key: string) {
 }
 
 function handleLogout() {
-  removeAuth()
-  router.push('/login')
+  showDialog({
+    title: '确认退出',
+    message: '确定要退出登录吗？',
+    confirmButtonText: '确认',
+    cancelButtonText: '取消',
+  }).then(() => {
+    removeAuth()
+    router.push('/user/home')
+  }).catch(() => {
+    // 取消，不做操作
+  })
 }
 
 onMounted(() => {

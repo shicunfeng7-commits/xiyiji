@@ -18,8 +18,9 @@
         v-model="username"
         label="账号"
         placeholder="请输入管理员账号"
-        clearable
         left-icon="manager-o"
+        label-width="60px"
+        input-align="left"
       />
       <van-field
         v-model="password"
@@ -27,6 +28,8 @@
         label="密码"
         placeholder="请输入密码"
         left-icon="lock-o"
+        label-width="60px"
+        input-align="left"
       />
       <button class="login-btn" @click="handleLogin">登 录</button>
     </div>
@@ -144,3 +147,39 @@ async function handleLogin() {
   transform: scale(0.98);
 }
 </style>
+
+<!-- 非 scoped 样式：穿透 Vant 组件内部，确保对齐 -->
+<style>
+.admin-login .van-field {
+  padding: 12px 16px !important;
+  background: transparent !important;
+}
+.admin-login .van-field__left-icon {
+  width: 22px !important;
+  min-width: 22px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin-right: 4px !important;
+}
+.admin-login .van-field__label {
+  width: 60px !important;
+  min-width: 60px !important;
+  max-width: 60px !important;
+  flex-shrink: 0 !important;
+  box-sizing: border-box !important;
+  color: #666666 !important;
+  font-size: 15px !important;
+  font-weight: 500 !important;
+  text-align: left !important;
+}
+.admin-login .van-field__value {
+  flex: 1 !important;
+}
+.admin-login .van-field__control {
+  color: #000000 !important;
+  font-size: 15px !important;
+}
+.admin-login .van-field__control::placeholder {
+  color: #bbb !important;
+}</style>

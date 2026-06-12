@@ -66,8 +66,7 @@
         v-model="rejectReason"
         type="textarea"
         rows="3"
-        placeholder="请输入拒绝原因"
-        :rules="[{ required: true, message: '请输入拒绝原因' }]"
+        placeholder="请输入拒绝原因（可选，不填默认为未知原因）"
       />
     </van-dialog>
     
@@ -75,7 +74,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { showToast, showDialog } from 'vant'
 import { get, post } from '../../utils/request'
 
@@ -137,12 +136,9 @@ function showRejectDialog(item: any) {
 }
 
 async function doReject() {
-  if (!rejectReason.value.trim()) {
-    showToast('请输入拒绝原因')
-    return
-  }
+  const reason = rejectReason.value.trim() || '未知原因'
   try {
-    await post(`/api/admin/employee/reject/${currentRejectItem.value.id}?remark=${encodeURIComponent(rejectReason.value.trim())}`)
+    await post(`/api/admin/employee/reject/${currentRejectItem.value.id}?remark=${encodeURIComponent(reason)}`)
     showToast('已拒绝')
     rejectDialogShow.value = false
     fetchList()
@@ -151,7 +147,9 @@ async function doReject() {
   }
 }
 
-fetchList()
+onMounted(() => {
+  fetchList()
+})
 </script>
 
 <style scoped>
