@@ -878,6 +878,11 @@ onMounted(() => {
   box-shadow: 0 4px 14px rgba(255,215,0,0.3);
 }
 
+.action-btn.completed {
+  background: #F5F5F7;
+  color: #86868B;
+}
+
 .action-btn:active {
   transform: scale(0.98);
 }

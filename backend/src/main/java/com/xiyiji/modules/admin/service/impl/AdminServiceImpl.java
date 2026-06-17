@@ -47,10 +47,21 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, Admin> implements
 
     @Override
     public Admin login(String username, String password) {
-        LambdaQueryWrapper<Admin> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(Admin::getUsername, username)
-               .eq(Admin::getPassword, password);
-        return getOne(wrapper);
+        // 改用统一 user 表验证，role=0 为管理员
+        LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<User>();
+        wrapper.eq(User::getUsername, username)
+               .eq(User::getPassword, password)
+               .eq(User::getRole, 0);
+        User user = userMapper.selectOne(wrapper);
+        if (user == null) {
+            return null;
+        }
+        // 保持返回 Admin 对象兼容（使用 user 表数据构造）
+        Admin admin = new Admin();
+        admin.setId(user.getId());
+        admin.setUsername(user.getUsername());
+        admin.setName(user.getNickname());
+        return admin;
     }
 
     @Override

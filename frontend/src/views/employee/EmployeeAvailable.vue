@@ -73,6 +73,8 @@ const unreadCount = ref(0)
 
 let ws: WebSocket | null = null
 let reconnectTimer: number | null = null
+let reconnectCount = 0
+const MAX_RECONNECT = 5
 
 function connectWebSocket() {
   const token = localStorage.getItem('washpro_token')
@@ -86,6 +88,7 @@ function connectWebSocket() {
   
   ws.onopen = () => {
     console.log('WebSocket connected')
+    reconnectCount = 0
     if (reconnectTimer) {
       clearTimeout(reconnectTimer)
       reconnectTimer = null
@@ -108,7 +111,8 @@ function connectWebSocket() {
   }
   
   ws.onclose = () => {
-    // reconnecting
+    if (reconnectCount >= MAX_RECONNECT) return
+    reconnectCount++
     reconnectTimer = window.setTimeout(() => {
       connectWebSocket()
     }, 5000)

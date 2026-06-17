@@ -5,7 +5,6 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.xiyiji.modules.order.entity.OrderStatusLog;
 import com.xiyiji.modules.order.mapper.OrderStatusLogMapper;
 import com.xiyiji.modules.order.service.OrderStatusLogService;
-import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;

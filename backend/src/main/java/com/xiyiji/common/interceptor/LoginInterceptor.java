@@ -29,8 +29,21 @@ public class LoginInterceptor implements HandlerInterceptor {
 
         Long userId = JwtTokenUtil.parseUserId(token);
         String phone = JwtTokenUtil.parsePhone(token);
+        String role = JwtTokenUtil.parseRole(token);
         request.setAttribute("userId", userId);
         request.setAttribute("phone", phone);
+        request.setAttribute("role", role);
+
+        String path = request.getRequestURI();
+        if (path.startsWith("/api/admin")) {
+            if (!"admin".equals(role)) {
+                response.setStatus(403);
+                response.setContentType("application/json;charset=UTF-8");
+                response.getWriter().write("{\"code\":403,\"msg\":\"无管理员权限\"}");
+                return false;
+            }
+        }
+
         return true;
     }
 }

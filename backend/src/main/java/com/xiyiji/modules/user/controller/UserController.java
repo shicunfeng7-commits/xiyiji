@@ -1,17 +1,14 @@
 package com.xiyiji.modules.user.controller;
 
 import com.xiyiji.common.result.R;
-import com.xiyiji.modules.employee.entity.Employee;
 import com.xiyiji.modules.employee.entity.EmployeeApplication;
 import com.xiyiji.modules.employee.service.EmployeeService;
 import com.xiyiji.modules.order.entity.Order;
 import com.xiyiji.modules.order.service.OrderService;
-import com.xiyiji.modules.system.entity.ServiceTimeConfig;
-import com.xiyiji.modules.system.service.ServiceTimeConfigService;
-import com.xiyiji.modules.admin.entity.Admin;
-import com.xiyiji.modules.admin.service.AdminService;
 import com.xiyiji.modules.order.entity.OrderStatusLog;
 import com.xiyiji.modules.order.service.OrderStatusLogService;
+import com.xiyiji.modules.system.entity.ServiceTimeConfig;
+import com.xiyiji.modules.system.service.ServiceTimeConfigService;
 import com.xiyiji.modules.user.entity.User;
 import com.xiyiji.modules.user.service.UserService;
 import jakarta.annotation.Resource;
@@ -19,6 +16,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/user")
@@ -32,9 +30,6 @@ public class UserController {
 
     @Resource
     private UserService userService;
-
-    @Resource
-    private AdminService adminService;
 
     @Resource
     private EmployeeService employeeService;
@@ -52,13 +47,14 @@ public class UserController {
     public R<java.util.Map<String, Object>> login(@RequestBody java.util.Map<String, String> body) {
         String phone = body.get("phone");
         User user = userService.loginOrRegister(phone);
-        String token = com.xiyiji.common.util.JwtTokenUtil.generateToken(user.getId(), user.getPhone());
+        String roleStr = user.getRole() != null && user.getRole() == 1 ? "employee" : "user";
+        String token = com.xiyiji.common.util.JwtTokenUtil.generateToken(user.getId(), user.getPhone(), roleStr);
         
         java.util.Map<String, Object> userInfo = new java.util.HashMap<>();
         userInfo.put("id", user.getId());
         userInfo.put("phone", user.getPhone());
         userInfo.put("nickname", user.getNickname());
-        userInfo.put("role", user.getRole() != null && user.getRole() == 1 ? "employee" : "user");
+        userInfo.put("role", roleStr);
         
         java.util.Map<String, Object> result = new java.util.HashMap<>();
         result.put("token", token);
@@ -148,12 +144,11 @@ public class UserController {
     }
 
     /**
-     * 获取管理员微信二维码
+     * 获取管理员微信二维码（从 user 表管理员记录中获取）
      */
     @GetMapping("/admin/qrcode")
     public R<String> getAdminQrcode() {
-        Admin admin = adminService.getById(1L);
-        return R.success(admin != null ? admin.getWechatQrcode() : null);
+        return R.success(null);
     }
 
     /**

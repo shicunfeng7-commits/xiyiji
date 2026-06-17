@@ -20,12 +20,17 @@ public class JwtTokenUtil {
     }
 
     public static String generateToken(Long userId, String phone) {
+        return generateToken(userId, phone, "user");
+    }
+
+    public static String generateToken(Long userId, String phone, String role) {
         Date now = new Date();
         Date expirationDate = new Date(now.getTime() + EXPIRATION);
 
         return Jwts.builder()
                 .claim("userId", userId)
                 .claim("phone", phone)
+                .claim("role", role)
                 .issuedAt(now)
                 .expiration(expirationDate)
                 .signWith(getKey())
@@ -35,7 +40,8 @@ public class JwtTokenUtil {
     public static Long parseUserId(String token) {
         Claims claims = parseClaims(token);
         if (claims != null) {
-            return claims.get("userId", Long.class);
+            Number userId = claims.get("userId", Number.class);
+            return userId != null ? userId.longValue() : null;
         }
         return null;
     }
@@ -44,6 +50,14 @@ public class JwtTokenUtil {
         Claims claims = parseClaims(token);
         if (claims != null) {
             return claims.get("phone", String.class);
+        }
+        return null;
+    }
+
+    public static String parseRole(String token) {
+        Claims claims = parseClaims(token);
+        if (claims != null) {
+            return claims.get("role", String.class);
         }
         return null;
     }

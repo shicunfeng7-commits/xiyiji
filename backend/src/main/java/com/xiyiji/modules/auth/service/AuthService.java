@@ -27,13 +27,22 @@ public class AuthService {
             user = new User();
             user.setPhone(phone);
             user.setNickname("用户" + phone.substring(phone.length() - 4));
-            user.setRole(0);
+            user.setRole(2); // 默认角色: 用户
             user.setCreateTime(LocalDateTime.now());
             user.setUpdateTime(LocalDateTime.now());
             userMapper.insert(user);
         }
 
-        String token = JwtTokenUtil.generateToken(user.getId(), user.getPhone());
+        // role: 0-管理员, 1-员工, 2-用户
+        String roleStr;
+        if (user.getRole() == 0) {
+            roleStr = "admin";
+        } else if (user.getRole() == 1) {
+            roleStr = "employee";
+        } else {
+            roleStr = "user";
+        }
+        String token = JwtTokenUtil.generateToken(user.getId(), user.getPhone(), roleStr);
 
         Map<String, Object> userInfo = new HashMap<>();
         userInfo.put("id", user.getId());
@@ -42,8 +51,6 @@ public class AuthService {
         userInfo.put("avatar", user.getAvatar());
         userInfo.put("buildingName", user.getBuildingName());
         userInfo.put("roomNo", user.getRoomNo());
-        // 统一返回 String 类型: "user" / "employee"
-        String roleStr = user.getRole() != null && user.getRole() == 1 ? "employee" : "user";
         userInfo.put("role", roleStr);
 
         // 如果 role=1（员工），查询 employee 表获取员工信息

@@ -368,6 +368,10 @@ async function handleSubmit() {
     showToast('请选择时间段')
     return
   }
+  if (!contactPhone.value || contactPhone.value.length !== 11) {
+    showToast('请输入正确的联系电话')
+    return
+  }
 
   // 检查登录状态
   if (!isLoggedIn()) {

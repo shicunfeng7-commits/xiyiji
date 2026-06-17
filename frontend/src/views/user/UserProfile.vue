@@ -409,9 +409,8 @@ async function handleLogin() {
       setupBuilding.value = user.buildingName || ''
       setupRoom.value = user.roomNo || ''
       showSetupDialog.value = true
-    } else {
-      handleLoginSuccess()
     }
+    handleLoginSuccess()
     phone.value = ''
   } catch {
     showToast('登录失败，请稍后重试')

@@ -52,7 +52,7 @@ public class AdminController {
         String password = body.get("password");
         Admin admin = adminService.login(username, password);
         if (admin != null) {
-            String token = com.xiyiji.common.util.JwtTokenUtil.generateToken(admin.getId(), admin.getUsername());
+            String token = com.xiyiji.common.util.JwtTokenUtil.generateToken(admin.getId(), admin.getUsername(), "admin");
             
             java.util.Map<String, Object> userInfo = new java.util.HashMap<>();
             userInfo.put("id", admin.getId());
@@ -414,10 +414,5 @@ public class AdminController {
         result.put("employeeRanking", employeeRanking);
         
         return R.success(result);
-    }
-    
-    private int calculateTrend(long current, long previous) {
-        if (previous == 0) return 0;
-        return (int) ((current - previous) * 100 / previous);
     }
 }
