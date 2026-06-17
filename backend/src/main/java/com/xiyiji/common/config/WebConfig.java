@@ -47,6 +47,8 @@ public class WebConfig implements WebMvcConfigurer {
                         "/api/user/login",
                         "/api/user/time-slots",
                         "/api/admin/login",
+                        "/api/auth/login",
+                        "/api/auth/admin/login",
                         "/ws/**"
                 );
     }

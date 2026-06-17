@@ -42,6 +42,7 @@
           <span class="card-amount">¥{{ o.amount }}</span>
           <div class="card-actions">
             <span v-if="o.employeeName" class="emp-name">{{ o.employeeName }}</span>
+            <span v-else-if="o.status === 1" class="emp-name pending-assign">待分配</span>
             <button v-if="o.status === 0" class="action-btn pay-btn" @click="confirmPay(o)">确认已支付</button>
             <button v-if="o.status === 1 && !o.employeeId" class="action-btn revert-btn" @click="revertPay(o)">回退</button>
             <button class="action-btn del-btn" @click="deleteOrder(o)">删除</button>
@@ -74,9 +75,11 @@ const loading = ref(true)
 const statusOptions = [
   { label: '全部', value: null },
   { label: '未支付', value: 0 },
-  { label: '待服务', value: 1 },
+  { label: '已支付', value: 1 },
+  { label: '待服务', value: 5 },
   { label: '服务中', value: 2 },
   { label: '已完成', value: 3 },
+  { label: '已取消', value: 4 },
 ]
 
 let debounceTimer: ReturnType<typeof setTimeout> | null = null
@@ -88,10 +91,12 @@ function onSearchDebounced() {
 }
 
 function statusClass(s: number) {
-  return ['unpaid','paid','progress','done'][s] || ''
+  const map: Record<number, string> = { 0: 'unpaid', 1: 'paid', 2: 'progress', 3: 'done', 4: 'cancelled', 5: 'pending' }
+  return map[s] || ''
 }
 function statusText(s: number) {
-  return ['未支付','待服务','服务中','已完成'][s] || '未知'
+  const map: Record<number, string> = { 0: '未支付', 1: '已支付', 2: '服务中', 3: '已完成', 4: '已取消', 5: '待服务' }
+  return map[s] || '未知'
 }
 
 const filteredOrders = computed(() => orders.value)
@@ -185,6 +190,8 @@ onMounted(loadOrders)
 .order-status.paid { background: #E3F2FD; color: #1565C0; }
 .order-status.progress { background: #FFF8E1; color: #E65100; }
 .order-status.done { background: #E8F5E9; color: #2E7D32; }
+.order-status.cancelled { background: #F5F5F5; color: #86868B; }
+.order-status.pending { background: #F3E5F5; color: #7B1FA2; }
 
 .card-mid { display: flex; flex-direction: column; gap: 3px; padding-bottom: 12px; border-bottom: 1px solid #F5F5F7; margin-bottom: 10px; }
 .card-loc { font-size: 14px; color: #1D1D1F; }
@@ -194,6 +201,7 @@ onMounted(loadOrders)
 .card-amount { font-size: 18px; font-weight: 800; color: #1D1D1F; letter-spacing: -0.02em; }
 .card-actions { display: flex; align-items: center; gap: 8px; }
 .emp-name { font-size: 12px; color: #2B95FF; font-weight: 500; }
+.emp-name.pending-assign { color: #FF9500; font-style: italic; }
 
 .action-btn {
   padding: 8px 18px; border: none; border-radius: 18px; font-size: 13px;

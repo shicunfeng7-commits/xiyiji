@@ -10,17 +10,21 @@
     <div class="employee-list">
       <div class="employee-card" v-for="emp in employees" :key="emp.id">
         <div class="emp-avatar">
-          <van-icon name="contact" size="28" :color="emp.status === 'free' ? '#34C759' : '#FF9500'" />
+          <van-icon name="contact" size="28" :color="emp.isActive === 1 ? (emp.status === 'free' ? '#34C759' : '#FF9500') : '#C7C7CC'" />
         </div>
         <div class="emp-info">
           <div class="emp-name">{{ emp.name }}</div>
           <div class="emp-phone">{{ emp.phone }}</div>
         </div>
         <div class="emp-status">
-          <span class="status-dot" :class="emp.status"></span>
-          {{ emp.status === 'free' ? '空闲' : '服务中' }}
+          <span class="status-dot" :class="emp.isActive === 1 ? emp.status : 'inactive'"></span>
+          {{ emp.isActive === 1 ? (emp.status === 'free' ? '空闲' : '服务中') : '已停用' }}
         </div>
-        <button class="remove-btn" @click="removeEmp(emp)">移除</button>
+        <button
+          class="toggle-btn"
+          :class="{ disable: emp.isActive === 1 }"
+          @click="toggleEmployee(emp)"
+        >{{ emp.isActive === 1 ? '停用' : '启用' }}</button>
       </div>
     </div>
 
@@ -36,7 +40,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { showToast, showConfirmDialog, showLoadingToast, closeToast } from 'vant'
-import { get, post, del } from '../../utils/request'
+import { get, post } from '../../utils/request'
 
 const showAdd = ref(false)
 const newName = ref('')
@@ -54,7 +58,8 @@ async function loadEmployees() {
         id: item.id,
         name: item.name || '未知',
         phone: item.phone ? item.phone.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2') : '',
-        status: 'free',
+        status: item.status === 1 ? 'busy' : 'free',
+        isActive: item.isActive ?? 1,
         account: '',
       }))
     }
@@ -87,19 +92,20 @@ async function addEmployee() {
   }
 }
 
-async function removeEmp(emp: any) {
+async function toggleEmployee(emp: any) {
+  const action = emp.isActive === 1 ? '停用' : '启用'
   showConfirmDialog({
-    title: '移除员工',
-    message: `确定移除 ${emp.name} 吗？`,
+    title: `${action}员工`,
+    message: `确定${action} ${emp.name} 吗？${emp.isActive === 1 ? '停用后该员工将无法抢单。' : ''}`,
   }).then(async () => {
     try {
-      const res = await del<{ code: number }>(`/api/admin/employee/${emp.id}`)
+      const res = await post<{ code: number }>(`/api/admin/employee/toggle/${emp.id}`)
       if (res.data.code === 200) {
-        employees.value = employees.value.filter(e => e.id !== emp.id)
-        showToast('已移除')
+        emp.isActive = emp.isActive === 1 ? 0 : 1
+        showToast(`已${action}`)
       }
     } catch (error) {
-      showToast('移除失败')
+      showToast(`${action}失败`)
     }
   })
 }
@@ -199,10 +205,14 @@ onMounted(() => {
   background: #FF9500;
 }
 
-.remove-btn {
+.status-dot.inactive {
+  background: #C7C7CC;
+}
+
+.toggle-btn {
   padding: 6px 14px;
-  background: rgba(255,59,48,0.1);
-  color: #FF3B30;
+  background: rgba(52,199,89,0.1);
+  color: #34C759;
   border: none;
   border-radius: 14px;
   font-size: 12px;
@@ -211,7 +221,12 @@ onMounted(() => {
   transition: all 0.2s;
 }
 
-.remove-btn:active {
+.toggle-btn.disable {
+  background: rgba(255,59,48,0.1);
+  color: #FF3B30;
+}
+
+.toggle-btn:active {
   opacity: 0.7;
 }
 </style>

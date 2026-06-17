@@ -348,6 +348,18 @@ async function checkAuth() {
   if (token && savedUser) {
     isLogged.value = true
     checkingAuth.value = false
+
+    // 根据角色自动跳转到对应页面
+    const role = getRole()
+    if (role === 'employee') {
+      router.replace('/employee/available')
+      return
+    }
+    if (role === 'admin') {
+      router.replace('/admin/dashboard')
+      return
+    }
+
     // 后台静默验证 token（不阻塞 UI，失败也不清除状态）
     try {
       const res = await get<{code: number; data: any}>('/api/user/profile')
@@ -424,6 +436,8 @@ function handleLoginSuccess() {
   loginAnimating.value = true
   loginExpanding.value = false
   
+  const role = getRole()
+  
   setTimeout(() => {
     isLogged.value = true
     loadUserInfo()
@@ -433,6 +447,17 @@ function handleLoginSuccess() {
     if (sessionStorage.getItem('order_redirect') === 'true') {
       sessionStorage.removeItem('order_redirect')
       router.push('/user/order/create')
+      return
+    }
+
+    // 根据角色跳转到对应页面
+    if (role === 'employee') {
+      router.push('/employee/available')
+      return
+    }
+    if (role === 'admin') {
+      router.push('/admin/dashboard')
+      return
     }
     
     // 开始扩散动画

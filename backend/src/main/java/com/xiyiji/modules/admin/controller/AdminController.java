@@ -152,8 +152,27 @@ public class AdminController {
      */
     @PostMapping("/employee/add")
     public R<Void> addEmployee(@RequestBody Employee employee) {
-        employee.setStatus(0);
+        employee.setStatus(com.xiyiji.common.constant.EmployeeStatus.FREE);
+        if (employee.getIsActive() == null) {
+            employee.setIsActive(com.xiyiji.common.constant.EmployeeStatus.ENABLED);
+        }
         employeeService.save(employee);
+        return R.success();
+    }
+
+    /**
+     * 启用/停用员工
+     */
+    @PostMapping("/employee/toggle/{id}")
+    public R<Void> toggleEmployee(@PathVariable Long id) {
+        Employee employee = employeeService.getById(id);
+        if (employee == null) {
+            return R.error("员工不存在");
+        }
+        employee.setIsActive(employee.getIsActive() == com.xiyiji.common.constant.EmployeeStatus.ENABLED
+                ? com.xiyiji.common.constant.EmployeeStatus.DISABLED
+                : com.xiyiji.common.constant.EmployeeStatus.ENABLED);
+        employeeService.updateById(employee);
         return R.success();
     }
 
@@ -278,7 +297,7 @@ public class AdminController {
         
         // 营收统计
         java.math.BigDecimal totalRevenue = orderService.list().stream()
-                .filter(o -> o.getStatus() == 3)
+                .filter(o -> o.getStatus() == com.xiyiji.common.constant.OrderStatus.COMPLETED)
                 .map(com.xiyiji.modules.order.entity.Order::getAmount)
                 .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
         result.put("totalRevenue", totalRevenue.doubleValue());
@@ -296,13 +315,15 @@ public class AdminController {
         // 订单状态分布
         java.util.Map<String, Object> statusDistribution = new java.util.HashMap<>();
         statusDistribution.put("unpaid", orderService.count(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<com.xiyiji.modules.order.entity.Order>()
-                .eq(com.xiyiji.modules.order.entity.Order::getStatus, 0)));
+                .eq(com.xiyiji.modules.order.entity.Order::getStatus, com.xiyiji.common.constant.OrderStatus.UNPAID)));
         statusDistribution.put("paid", orderService.count(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<com.xiyiji.modules.order.entity.Order>()
-                .eq(com.xiyiji.modules.order.entity.Order::getStatus, 1)));
+                .eq(com.xiyiji.modules.order.entity.Order::getStatus, com.xiyiji.common.constant.OrderStatus.PAID)));
+        statusDistribution.put("pendingService", orderService.count(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<com.xiyiji.modules.order.entity.Order>()
+                .eq(com.xiyiji.modules.order.entity.Order::getStatus, com.xiyiji.common.constant.OrderStatus.PENDING_SERVICE)));
         statusDistribution.put("inProgress", orderService.count(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<com.xiyiji.modules.order.entity.Order>()
-                .eq(com.xiyiji.modules.order.entity.Order::getStatus, 2)));
+                .eq(com.xiyiji.modules.order.entity.Order::getStatus, com.xiyiji.common.constant.OrderStatus.IN_PROGRESS)));
         statusDistribution.put("completed", orderService.count(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<com.xiyiji.modules.order.entity.Order>()
-                .eq(com.xiyiji.modules.order.entity.Order::getStatus, 3)));
+                .eq(com.xiyiji.modules.order.entity.Order::getStatus, com.xiyiji.common.constant.OrderStatus.COMPLETED)));
         result.put("statusDistribution", statusDistribution);
         
         // 营收趋势
@@ -310,7 +331,7 @@ public class AdminController {
         java.time.LocalDate today = java.time.LocalDate.now();
         java.util.List<com.xiyiji.modules.order.entity.Order> completedOrders = orderService.list(
             new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<com.xiyiji.modules.order.entity.Order>()
-                .eq(com.xiyiji.modules.order.entity.Order::getStatus, 3)
+                .eq(com.xiyiji.modules.order.entity.Order::getStatus, com.xiyiji.common.constant.OrderStatus.COMPLETED)
                 .isNotNull(com.xiyiji.modules.order.entity.Order::getCompleteTime));
         String[] weekDays = {"周一","周二","周三","周四","周五","周六","周日"};
 
@@ -389,7 +410,7 @@ public class AdminController {
         });
         
         orderService.list(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<com.xiyiji.modules.order.entity.Order>()
-                .eq(com.xiyiji.modules.order.entity.Order::getStatus, 3))
+                .eq(com.xiyiji.modules.order.entity.Order::getStatus, com.xiyiji.common.constant.OrderStatus.COMPLETED))
                 .forEach(order -> {
                     Long empId = order.getEmployeeId();
                     if (empId != null) {

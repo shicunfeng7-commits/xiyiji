@@ -129,22 +129,15 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
             return false;
         }
         int fromStatus = order.getStatus();
-        // 乐观锁：只有 PAID 状态且无 employee_id 的才能抢
         LambdaUpdateWrapper<Order> wrapper = new LambdaUpdateWrapper<>();
         wrapper.eq(Order::getId, orderId)
                .eq(Order::getStatus, OrderStatus.PAID)
                .isNull(Order::getEmployeeId)
                .set(Order::getEmployeeId, employeeId)
-               .set(Order::getStatus, OrderStatus.IN_PROGRESS);
+               .set(Order::getStatus, OrderStatus.PENDING_SERVICE);
         boolean updated = update(wrapper);
         if (updated) {
-            orderStatusLogService.log(orderId, fromStatus, OrderStatus.IN_PROGRESS, 2, employeeId);
-            // 更新员工状态为服务中
-            employeeService.update(
-                    new LambdaUpdateWrapper<Employee>()
-                            .eq(Employee::getId, employeeId)
-                            .set(Employee::getStatus, 1)
-            );
+            orderStatusLogService.log(orderId, fromStatus, OrderStatus.PENDING_SERVICE, 2, employeeId);
         }
         return updated;
     }
@@ -153,18 +146,23 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     @Transactional
     public boolean startOrder(Long orderId, Long employeeId) {
         Order order = getById(orderId);
-        if (order == null || !employeeId.equals(order.getEmployeeId()) || order.getStatus() != OrderStatus.PAID) {
+        if (order == null || !employeeId.equals(order.getEmployeeId()) || order.getStatus() != OrderStatus.PENDING_SERVICE) {
             return false;
         }
         int fromStatus = order.getStatus();
         LambdaUpdateWrapper<Order> wrapper = new LambdaUpdateWrapper<>();
         wrapper.eq(Order::getId, orderId)
                .eq(Order::getEmployeeId, employeeId)
-               .eq(Order::getStatus, OrderStatus.PAID)
+               .eq(Order::getStatus, OrderStatus.PENDING_SERVICE)
                .set(Order::getStatus, OrderStatus.IN_PROGRESS);
         boolean result = update(wrapper);
         if (result) {
             orderStatusLogService.log(orderId, fromStatus, OrderStatus.IN_PROGRESS, 2, employeeId);
+            employeeService.update(
+                    new LambdaUpdateWrapper<Employee>()
+                            .eq(Employee::getId, employeeId)
+                            .set(Employee::getStatus, com.xiyiji.common.constant.EmployeeStatus.BUSY)
+            );
         }
         return result;
     }
@@ -194,7 +192,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
             employeeService.update(
                     new LambdaUpdateWrapper<Employee>()
                             .eq(Employee::getId, employeeId)
-                            .set(Employee::getStatus, 0)
+                            .set(Employee::getStatus, com.xiyiji.common.constant.EmployeeStatus.FREE)
             );
         }
         return updated;

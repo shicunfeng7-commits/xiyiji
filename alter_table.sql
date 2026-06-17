@@ -1,4 +1,0 @@
-USE washpro;
-ALTER TABLE employee_application ADD COLUMN IF NOT EXISTS major VARCHAR(100) DEFAULT NULL COMMENT '学院专业' AFTER phone;
-ALTER TABLE employee_application ADD COLUMN IF NOT EXISTS grade VARCHAR(50) DEFAULT NULL COMMENT '年级' AFTER major;
-SHOW COLUMNS FROM employee_application;

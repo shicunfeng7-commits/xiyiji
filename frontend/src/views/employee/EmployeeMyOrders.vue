@@ -197,8 +197,8 @@ async function loadOrders() {
           timeSlot: `${item.startTime} ~ ${item.endTime}`,
           amount: item.amount?.toString() || '29.90',
           remark: item.remark,
-          status: item.status === 2 ? 'in_progress' : item.status === 3 ? 'completed' : 'pending',
-          statusText: item.status === 2 ? '服务中' : item.status === 3 ? '已完成' : '待处理',
+          status: item.status === 2 ? 'in_progress' : item.status === 3 ? 'completed' : item.status === 5 ? 'pending_service' : 'pending',
+          statusText: item.status === 2 ? '服务中' : item.status === 3 ? '已完成' : item.status === 5 ? '待服务' : '待处理',
           beforePhotos,
           afterPhotos,
           completing: false,
@@ -271,6 +271,7 @@ onMounted(() => {
 }
 .order-status.in_progress { background: rgba(255,149,0,0.1); color: #FF9500; }
 .order-status.completed { background: rgba(52,199,89,0.1); color: #34C759; }
+.order-status.pending_service { background: rgba(123,31,162,0.1); color: #7B1FA2; }
 
 .order-body {
   padding-bottom: 12px;

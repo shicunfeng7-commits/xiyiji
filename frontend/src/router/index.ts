@@ -74,9 +74,15 @@ router.beforeEach((to, from, next) => {
     return
   }
 
-  // 员工只能访问员工端页面和用户端页面
-  if (role === 'user' && to.path.startsWith('/employee/')) {
+  // 员工端页面只有员工和管理员能访问
+  if (to.path.startsWith('/employee/') && role !== 'employee' && role !== 'admin') {
     next('/user/home')
+    return
+  }
+
+  // 员工访问"我的"页面时自动跳转到员工个人中心
+  if (role === 'employee' && to.path === '/user/profile') {
+    next('/employee/profile')
     return
   }
 

@@ -55,6 +55,9 @@ public class EmployeeController {
         if (employee == null) {
             return R.error("该用户不是员工");
         }
+        if (employee.getIsActive() == null || employee.getIsActive() == com.xiyiji.common.constant.EmployeeStatus.DISABLED) {
+            return R.error("该员工已被停用，无法抢单");
+        }
         boolean success = orderService.grabOrder(orderId, employee.getId());
         return success ? R.success() : R.error("抢单失败，该订单已被抢走");
     }
@@ -156,7 +159,7 @@ public class EmployeeController {
 
         var query = orderService.lambdaQuery()
                 .eq(Order::getEmployeeId, employee.getId())
-                .eq(Order::getStatus, 3)
+                .eq(Order::getStatus, com.xiyiji.common.constant.OrderStatus.COMPLETED)
                 .ge(Order::getCompleteTime, start.atStartOfDay());
         if (range.equals("today")) {
             query.le(Order::getCompleteTime, end.plusDays(1).atStartOfDay());
