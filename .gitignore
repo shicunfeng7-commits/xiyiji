@@ -27,9 +27,14 @@ Thumbs.db
 .env.local
 .env.*.local
 
-# === Java backend (future) ===
+# === Java backend ===
 backend/target/
 backend/*.jar
 backend/*.war
 backend/bin/
 backend/.sts4-cache/
+backend/uploads/
+
+# === Tools ===
+.claude/
+.trae/

@@ -1,6 +1,9 @@
 package com.xiyiji.modules.admin.controller;
 
+import com.xiyiji.common.dto.AdminLoginDTO;
 import com.xiyiji.common.result.R;
+import com.xiyiji.common.vo.LoginVO;
+import com.xiyiji.common.vo.UserInfoVO;
 import com.xiyiji.modules.admin.entity.Admin;
 import com.xiyiji.modules.admin.service.AdminService;
 import com.xiyiji.modules.employee.entity.Employee;
@@ -14,12 +17,17 @@ import com.xiyiji.modules.system.entity.ServiceTimeConfig;
 import com.xiyiji.modules.system.service.ServiceTimeConfigService;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/admin")
+@Tag(name = "管理端接口", description = "管理员登录、订单管理、员工管理、数据看板")
 public class AdminController {
 
     @Resource
@@ -43,34 +51,25 @@ public class AdminController {
     @Resource
     private OrderStatusLogService orderStatusLogService;
 
-    /**
-     * 管理员登录
-     */
+    @Operation(summary = "管理员登录")
     @PostMapping("/login")
-    public R<java.util.Map<String, Object>> login(@RequestBody java.util.Map<String, String> body) {
-        String username = body.get("username");
-        String password = body.get("password");
-        Admin admin = adminService.login(username, password);
+    public R<LoginVO> login(@Valid @RequestBody AdminLoginDTO dto) {
+        Admin admin = adminService.login(dto.getUsername(), dto.getPassword());
         if (admin != null) {
             String token = com.xiyiji.common.util.JwtTokenUtil.generateToken(admin.getId(), admin.getUsername(), "admin");
-            
-            java.util.Map<String, Object> userInfo = new java.util.HashMap<>();
-            userInfo.put("id", admin.getId());
-            userInfo.put("username", admin.getUsername());
-            userInfo.put("name", admin.getName());
-            userInfo.put("role", "admin");
-            
-            java.util.Map<String, Object> result = new java.util.HashMap<>();
-            result.put("token", token);
-            result.put("userInfo", userInfo);
-            return R.success(result);
+
+            UserInfoVO userInfo = new UserInfoVO();
+            userInfo.setId(admin.getId());
+            userInfo.setUsername(admin.getUsername());
+            userInfo.setNickname(admin.getName());
+            userInfo.setRole("admin");
+
+            return R.success(new LoginVO(token, userInfo));
         }
         return R.error(401, "账号或密码错误");
     }
 
-    /**
-     * 获取所有订单（可按状态筛选和排序）
-     */
+    @Operation(summary = "获取所有订单（支持状态筛选、排序、关键词搜索）")
     @GetMapping("/orders")
     public R<List<java.util.Map<String, Object>>> getOrders(
             @RequestParam(required = false) Integer status,
@@ -119,9 +118,7 @@ public class AdminController {
         return R.success(result);
     }
 
-    /**
-     * 确认已支付
-     */
+    @Operation(summary = "确认订单已支付")
     @PostMapping("/order/confirm-pay/{orderId}")
     public R<Void> confirmPay(@PathVariable Long orderId, HttpServletRequest request) {
         Long adminId = (Long) request.getAttribute("userId");
@@ -283,9 +280,7 @@ public class AdminController {
         return success ? R.success() : R.error("操作失败，申请状态异常");
     }
 
-    /**
-     * 获取数据看板统计数据
-     */
+    @Operation(summary = "获取数据看板统计（订单、营收、员工排行等）")
     @GetMapping("/dashboard")
     public R<java.util.Map<String, Object>> getDashboard(@RequestParam(required = false, defaultValue = "week") String range) {
         java.util.Map<String, Object> result = new java.util.HashMap<>();

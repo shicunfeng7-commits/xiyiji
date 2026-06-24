@@ -5,6 +5,8 @@ import com.xiyiji.modules.employee.entity.Employee;
 import com.xiyiji.modules.employee.service.EmployeeService;
 import com.xiyiji.modules.order.entity.Order;
 import com.xiyiji.modules.order.service.OrderService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.*;
@@ -13,6 +15,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/employee")
+@Tag(name = "员工端接口", description = "抢单、开始服务、完成服务、员工统计")
 public class EmployeeController {
 
     @Resource
@@ -24,9 +27,7 @@ public class EmployeeController {
     @Resource
     private OrderService orderService;
 
-    /**
-     * 获取当前员工信息（从 token 中解析 userId）
-     */
+    @Operation(summary = "获取当前员工信息")
     @GetMapping("/info")
     public R<Employee> getInfo() {
         Long userId = (Long) request.getAttribute("userId");
@@ -45,9 +46,7 @@ public class EmployeeController {
         return R.success(orderService.getAvailableOrders());
     }
 
-    /**
-     * 抢单（从 token 获取 userId → 查 employee → 抢单）
-     */
+    @Operation(summary = "抢单")
     @PostMapping("/order/grab/{orderId}")
     public R<Void> grabOrder(@PathVariable Long orderId) {
         Long userId = (Long) request.getAttribute("userId");
@@ -89,10 +88,7 @@ public class EmployeeController {
         return success ? R.success() : R.error("开始服务失败，订单状态异常");
     }
 
-    /**
-     * 完成服务（员工只能操作自己的订单，需上传前后对比照片）
-     * beforePhotos / afterPhotos 为 JSON 字符串数组，例如：["url1","url2"]
-     */
+    @Operation(summary = "完成服务（需上传清洗前后照片）")
     @PostMapping("/order/complete/{orderId}")
     public R<Void> completeOrder(@PathVariable Long orderId,
                                   @RequestParam(required = false) String beforePhotos,
@@ -133,9 +129,7 @@ public class EmployeeController {
         }
     }
 
-    /**
-     * 员工统计（今日/本周/本月完成订单数+收入）
-     */
+    @Operation(summary = "员工统计（今日/本周/本月完成订单数和收入）")
     @GetMapping("/stats")
     public R<java.util.Map<String, Object>> getStats(
             @RequestParam(required = false, defaultValue = "today") String range) {

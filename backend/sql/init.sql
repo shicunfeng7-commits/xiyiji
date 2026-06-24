@@ -22,9 +22,10 @@ CREATE TABLE IF NOT EXISTS `user` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- 插入默认管理员 (role=0)
+-- 密码 admin123 的 BCrypt 加密值，忘记密码时记住原文是 admin123 即可
 INSERT INTO `user` (`username`, `password`, `nickname`, `role`) VALUES
-('admin', 'admin123', '管理员', 0),
-('admin2', 'admin123', '管理员2', 0)
+('admin', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', '管理员', 0),
+('admin2', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVKIUi', '管理员2', 0)
 ON DUPLICATE KEY UPDATE `id` = `id`;
 
 -- 员工表

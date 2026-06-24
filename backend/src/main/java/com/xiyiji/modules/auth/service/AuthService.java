@@ -1,6 +1,8 @@
 package com.xiyiji.modules.auth.service;
 
 import com.xiyiji.common.util.JwtTokenUtil;
+import com.xiyiji.common.vo.LoginVO;
+import com.xiyiji.common.vo.UserInfoVO;
 import com.xiyiji.modules.employee.entity.Employee;
 import com.xiyiji.modules.employee.mapper.EmployeeMapper;
 import com.xiyiji.modules.user.entity.User;
@@ -9,8 +11,6 @@ import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.Map;
 
 @Service
 public class AuthService {
@@ -21,19 +21,18 @@ public class AuthService {
     @Resource
     private EmployeeMapper employeeMapper;
 
-    public Map<String, Object> login(String phone) {
+    public LoginVO login(String phone) {
         User user = userMapper.selectByPhone(phone);
         if (user == null) {
             user = new User();
             user.setPhone(phone);
             user.setNickname("用户" + phone.substring(phone.length() - 4));
-            user.setRole(2); // 默认角色: 用户
+            user.setRole(2);
             user.setCreateTime(LocalDateTime.now());
             user.setUpdateTime(LocalDateTime.now());
             userMapper.insert(user);
         }
 
-        // role: 0-管理员, 1-员工, 2-用户
         String roleStr;
         if (user.getRole() == 0) {
             roleStr = "admin";
@@ -44,31 +43,25 @@ public class AuthService {
         }
         String token = JwtTokenUtil.generateToken(user.getId(), user.getPhone(), roleStr);
 
-        Map<String, Object> userInfo = new HashMap<>();
-        userInfo.put("id", user.getId());
-        userInfo.put("phone", user.getPhone());
-        userInfo.put("nickname", user.getNickname());
-        userInfo.put("avatar", user.getAvatar());
-        userInfo.put("buildingName", user.getBuildingName());
-        userInfo.put("roomNo", user.getRoomNo());
-        userInfo.put("role", roleStr);
+        UserInfoVO userInfo = new UserInfoVO();
+        userInfo.setId(user.getId());
+        userInfo.setPhone(user.getPhone());
+        userInfo.setNickname(user.getNickname());
+        userInfo.setAvatar(user.getAvatar());
+        userInfo.setBuildingName(user.getBuildingName());
+        userInfo.setRoomNo(user.getRoomNo());
+        userInfo.setRole(roleStr);
 
-        // 如果 role=1（员工），查询 employee 表获取员工信息
         if (user.getRole() != null && user.getRole() == 1) {
             Employee employee = employeeMapper.selectOne(
                     new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<Employee>()
                             .eq(Employee::getUserId, user.getId())
             );
             if (employee != null) {
-                userInfo.put("employeeId", employee.getId());
-                userInfo.put("employeeName", employee.getName());
-                userInfo.put("employeeStatus", employee.getStatus());
+                userInfo.setEmployeeId(employee.getId());
             }
         }
 
-        Map<String, Object> result = new HashMap<>();
-        result.put("token", token);
-        result.put("user", userInfo);
-        return result;
+        return new LoginVO(token, userInfo);
     }
 }

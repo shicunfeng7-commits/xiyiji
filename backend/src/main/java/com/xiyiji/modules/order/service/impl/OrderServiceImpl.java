@@ -3,6 +3,7 @@ package com.xiyiji.modules.order.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.xiyiji.common.exception.BusinessException;
 import com.xiyiji.common.constant.OrderStatus;
 import com.xiyiji.modules.employee.entity.Employee;
 import com.xiyiji.modules.employee.service.EmployeeService;
@@ -41,9 +42,10 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     @Override
     @Transactional
     public Order createOrder(Order order) {
-        // 检查同一楼栋同一天是否有时间重叠的订单
+        // 【异常抛出点】检查同一楼栋同一天是否有时间重叠的订单
+        // 如果有冲突，抛出 BusinessException，程序跳转到 GlobalExceptionHandler 处理
         if (hasTimeConflict(order)) {
-            throw new RuntimeException("该时间段已有订单，请选择其他时间");
+            throw new BusinessException("该时间段已有订单，请选择其他时间");
         }
         
         order.setOrderNo(generateOrderNo());

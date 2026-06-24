@@ -18,6 +18,7 @@ import com.xiyiji.modules.order.service.OrderService;
 import com.xiyiji.modules.user.entity.User;
 import com.xiyiji.modules.user.mapper.UserMapper;
 import jakarta.annotation.Resource;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -45,18 +46,18 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, Admin> implements
     @Resource
     private UserMapper userMapper;
 
+    @Resource
+    private PasswordEncoder passwordEncoder;
+
     @Override
     public Admin login(String username, String password) {
-        // 改用统一 user 表验证，role=0 为管理员
         LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<User>();
         wrapper.eq(User::getUsername, username)
-               .eq(User::getPassword, password)
                .eq(User::getRole, 0);
         User user = userMapper.selectOne(wrapper);
-        if (user == null) {
+        if (user == null || !passwordEncoder.matches(password, user.getPassword())) {
             return null;
         }
-        // 保持返回 Admin 对象兼容（使用 user 表数据构造）
         Admin admin = new Admin();
         admin.setId(user.getId());
         admin.setUsername(user.getUsername());
