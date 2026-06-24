@@ -27,6 +27,10 @@ public class OrderReview {
     @TableField("content")
     private String content;
 
+    /** 是否精选展示：0-否，1-是 */
+    @TableField("is_featured")
+    private Integer isFeatured;
+
     @TableField("create_time")
     private LocalDateTime createTime;
 

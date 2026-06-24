@@ -13,6 +13,13 @@
           <div class="info-line" v-if="order.remark">备注: {{ order.remark }}</div>
         </div>
 
+        <!-- 待服务 → 开始服务 -->
+        <div v-if="order.status === 'pending_service'" class="complete-section">
+          <button class="action-btn start-btn" @click="handleStart(order)">
+            {{ order.starting ? '处理中...' : '开始服务' }}
+          </button>
+        </div>
+
         <!-- 服务中 → 照片上传 + 完成 -->
         <div v-if="order.status === 'in_progress'" class="complete-section">
           <!-- 清洗前照片 -->
@@ -71,6 +78,14 @@
               <img v-for="(url, i) in order.afterPhotos" :key="i" :src="url" class="photo-thumb" @click="previewImage(url)" @error="onImgError" />
             </div>
           </div>
+        </div>
+
+        <!-- 用户评价 -->
+        <div v-if="order.status === 'completed' && order.review" class="review-section">
+          <div class="review-stars">
+            <span v-for="s in 5" :key="s" :class="s <= order.review.score ? 'star active' : 'star'">★</span>
+          </div>
+          <div v-if="order.review.content" class="review-content">{{ order.review.content }}</div>
         </div>
 
         <div class="order-footer">
@@ -176,7 +191,7 @@ async function loadOrders() {
   try {
     const res = await get<{ code: number; data: any[] }>('/api/employee/orders/my-list')
     if (res.data.code === 200) {
-      myOrders.value = res.data.data.map((item: any) => {
+      const orders = res.data.data.map((item: any) => {
         const buildingInfo = item.buildingName?.split(' · ') || ['', '']
         let beforePhotos: string[] = []
         let afterPhotos: string[] = []
@@ -202,13 +217,43 @@ async function loadOrders() {
           beforePhotos,
           afterPhotos,
           completing: false,
+          starting: false,
+          review: null,
         }
       })
+
+      // 加载已完成订单的评价
+      for (const order of orders) {
+        if (order.status === 'completed') {
+          try {
+            const reviewRes = await get<{ code: number; data: any }>(`/api/employee/order/review/${order.id}`)
+            if (reviewRes.data.code === 200 && reviewRes.data.data) {
+              order.review = reviewRes.data.data
+            }
+          } catch { /* ignore */ }
+        }
+      }
+
+      myOrders.value = orders
     }
   } catch {
     // Ignore error
   } finally {
     loading.value = false
+  }
+}
+
+async function handleStart(order: any) {
+  order.starting = true
+  try {
+    await post(`/api/employee/order/start/${order.id}`)
+    order.status = 'in_progress'
+    order.statusText = '服务中'
+    showToast('已开始服务')
+  } catch {
+    showToast('操作失败，请重试')
+  } finally {
+    order.starting = false
   }
 }
 
@@ -369,8 +414,9 @@ onMounted(() => {
   margin-top: 12px;
 }
 .complete-btn { background: #34C759; color: white; }
-.complete-btn:disabled { background: #C7C7CC; cursor: not-allowed; }
-.complete-btn:not(:disabled):active { transform: scale(0.97); }
+.start-btn { background: #007AFF; color: white; }
+.complete-btn:disabled, .start-btn:disabled { background: #C7C7CC; cursor: not-allowed; }
+.complete-btn:not(:disabled):active, .start-btn:not(:disabled):active { transform: scale(0.97); }
 
 .photo-hint { text-align: center; font-size: 12px; color: #FF9500; margin-top: 6px; }
 
@@ -403,6 +449,12 @@ onMounted(() => {
   background: rgba(52,199,89,0.1);
   border-radius: 10px;
 }
+
+.review-section { padding: 10px 0 0; border-top: 1px solid #F5F5F7; margin-top: 10px; }
+.review-stars { display: flex; gap: 2px; margin-bottom: 4px; }
+.star { font-size: 14px; color: #3a3a3c; }
+.star.active { color: #FFD60A; }
+.review-content { font-size: 13px; color: #86868B; line-height: 1.5; }
 
 .empty-state { text-align: center; padding: 80px 0; }
 .empty-state p { font-size: 15px; color: #C7C7CC; margin-top: 12px; }

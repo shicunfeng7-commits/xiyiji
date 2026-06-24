@@ -41,6 +41,13 @@
           <img v-for="(url, i) in order.photos.slice(0, 4)" :key="i" :src="url" class="photo-thumb" @click="preview(url)" @error="onErr" />
           <span v-if="order.photos.length > 4" class="more-photos">+{{ order.photos.length - 4 }}</span>
         </div>
+        <!-- 用户评价 -->
+        <div v-if="order.review" class="review-section">
+          <div class="review-stars">
+            <span v-for="s in 5" :key="s" :class="s <= order.review.score ? 'star active' : 'star'">★</span>
+          </div>
+          <div v-if="order.review.content" class="review-content">{{ order.review.content }}</div>
+        </div>
       </div>
 
       <div v-if="filteredOrders.length === 0" class="empty-state">
@@ -96,7 +103,7 @@ async function loadOrders() {
   try {
     const res = await get<{ code: number; data: any[] }>('/api/employee/orders/my-list')
     if (res.data.code === 200) {
-      allOrders.value = res.data.data
+      const orders = res.data.data
         .filter((o: any) => o.status === 3)
         .sort((a: any, b: any) => (b.completeTime || '').localeCompare(a.completeTime || ''))
         .map((item: any) => {
@@ -109,9 +116,21 @@ async function loadOrders() {
             building: bi[1] || '', room: item.roomNo,
             date: item.serviceDate, timeSlot: `${item.startTime} ~ ${item.endTime}`,
             amount: item.amount?.toString() || '29.90',
-            completeTime: item.completeTime, photos,
+            completeTime: item.completeTime, photos, review: null,
           }
         })
+      
+      // 加载每个订单的评价
+      for (const order of orders) {
+        try {
+          const reviewRes = await get<{ code: number; data: any }>(`/api/employee/order/review/${order.id}`)
+          if (reviewRes.data.code === 200 && reviewRes.data.data) {
+            order.review = reviewRes.data.data
+          }
+        } catch { /* ignore */ }
+      }
+      
+      allOrders.value = orders
     }
   } catch { /* ignore */ } finally { loading.value = false }
 }
@@ -171,4 +190,10 @@ onMounted(loadOrders)
 
 .empty-state { text-align: center; padding: 60px 0; }
 .empty-state p { font-size: 14px; color: #C7C7CC; margin-top: 10px; }
+
+.review-section { padding: 8px 0 0; border-top: 1px solid #F5F5F7; margin-top: 8px; }
+.review-stars { display: flex; gap: 2px; margin-bottom: 4px; }
+.star { font-size: 14px; color: #3a3a3c; }
+.star.active { color: #FFD60A; }
+.review-content { font-size: 13px; color: #86868B; line-height: 1.5; }
 </style>

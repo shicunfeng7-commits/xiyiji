@@ -51,6 +51,9 @@ public class AdminController {
     @Resource
     private OrderStatusLogService orderStatusLogService;
 
+    @Resource
+    private com.xiyiji.modules.review.service.OrderReviewService orderReviewService;
+
     @Operation(summary = "管理员登录")
     @PostMapping("/login")
     public R<LoginVO> login(@Valid @RequestBody AdminLoginDTO dto) {
@@ -69,14 +72,15 @@ public class AdminController {
         return R.error(401, "账号或密码错误");
     }
 
-    @Operation(summary = "获取所有订单（支持状态筛选、排序、关键词搜索）")
+    @Operation(summary = "获取所有订单（支持状态筛选、排序、关键词搜索、精选筛选）")
     @GetMapping("/orders")
     public R<List<java.util.Map<String, Object>>> getOrders(
             @RequestParam(required = false) Integer status,
+            @RequestParam(required = false) Integer featured,
             @RequestParam(required = false, defaultValue = "createTime") String sort,
             @RequestParam(required = false, defaultValue = "desc") String order,
             @RequestParam(required = false) String keyword) {
-        List<Order> orders = orderService.getAllOrders(status, sort, order, keyword);
+        List<Order> orders = orderService.getAllOrders(status, featured, sort, order, keyword);
         List<java.util.Map<String, Object>> result = new java.util.ArrayList<>();
         for (Order o : orders) {
             java.util.Map<String, Object> map = new java.util.HashMap<>();
@@ -96,6 +100,9 @@ public class AdminController {
             map.put("remark", o.getRemark());
             map.put("beforePhoto", o.getBeforePhoto());
             map.put("afterPhoto", o.getAfterPhoto());
+            map.put("isPhotoFeatured", o.getIsPhotoFeatured());
+            map.put("showOrder", o.getShowOrder());
+            map.put("featuredPhotos", o.getFeaturedPhotos());
             map.put("createTime", o.getCreateTime());
             map.put("payTime", o.getPayTime());
             map.put("completeTime", o.getCompleteTime());
@@ -429,6 +436,144 @@ public class AdminController {
                 .forEach(employeeRanking::add);
         result.put("employeeRanking", employeeRanking);
         
+        return R.success(result);
+    }
+
+    // ====== 精选评价管理 ======
+
+    /**
+     * 获取所有评价列表（可按精选状态筛选）
+     */
+    @Operation(summary = "获取评价列表")
+    @GetMapping("/reviews")
+    public R<List<java.util.Map<String, Object>>> getReviews(
+            @RequestParam(required = false) Integer featured) {
+        
+        com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<com.xiyiji.modules.review.entity.OrderReview> wrapper =
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<>();
+        if (featured != null) {
+            wrapper.eq(com.xiyiji.modules.review.entity.OrderReview::getIsFeatured, featured);
+        }
+        wrapper.orderByDesc(com.xiyiji.modules.review.entity.OrderReview::getCreateTime);
+        
+        List<com.xiyiji.modules.review.entity.OrderReview> reviewList = orderReviewService.list(wrapper);
+        
+        java.util.List<java.util.Map<String, Object>> result = new java.util.ArrayList<>();
+        for (com.xiyiji.modules.review.entity.OrderReview r : reviewList) {
+            java.util.Map<String, Object> item = new java.util.HashMap<>();
+            item.put("id", r.getId());
+            item.put("orderId", r.getOrderId());
+            item.put("userId", r.getUserId());
+            item.put("score", r.getScore());
+            item.put("content", r.getContent());
+            item.put("isFeatured", r.getIsFeatured());
+            item.put("createTime", r.getCreateTime());
+            if (r.getUserId() != null) {
+                com.xiyiji.modules.user.entity.User user = userMapper.selectById(r.getUserId());
+                item.put("nickname", user != null ? user.getNickname() : "匿名用户");
+                item.put("phone", user != null ? user.getPhone() : "");
+            }
+            result.add(item);
+        }
+        return R.success(result);
+    }
+
+    @Operation(summary = "设置精选评价")
+    @PostMapping("/review/featured/{id}")
+    public R<Void> toggleFeatured(@PathVariable Long id, @RequestParam boolean featured) {
+        com.xiyiji.modules.review.entity.OrderReview review = orderReviewService.getById(id);
+        if (review == null) {
+            return R.error("评价不存在");
+        }
+        review.setIsFeatured(featured ? 1 : 0);
+        orderReviewService.updateById(review);
+        return R.success();
+    }
+
+    // ====== 精选照片管理 ======
+
+    /**
+     * 设置/取消精选照片
+     */
+    @Operation(summary = "设置精选照片")
+    @PostMapping("/order/photo-featured/{id}")
+    public R<Void> togglePhotoFeatured(@PathVariable Long id, @RequestParam boolean featured) {
+        Order order = orderService.getById(id);
+        if (order == null) {
+            return R.error("订单不存在");
+        }
+        order.setIsPhotoFeatured(featured ? 1 : 0);
+        if (featured && (order.getShowOrder() == null || order.getShowOrder() == 0)) {
+            // 设置展示顺序为当前最大值+1
+            Long count = orderService.count(
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<Order>()
+                    .eq(Order::getIsPhotoFeatured, 1)
+            );
+            order.setShowOrder((int)(count + 1));
+        } else if (!featured) {
+            order.setShowOrder(0);
+        }
+        orderService.updateById(order);
+        return R.success();
+    }
+
+    /**
+     * 设置展示顺序
+     */
+    @Operation(summary = "设置展示顺序")
+    @PostMapping("/order/show-order/{id}")
+    public R<Void> setShowOrder(@PathVariable Long id, @RequestParam Integer showOrder) {
+        Order order = orderService.getById(id);
+        if (order == null) {
+            return R.error("订单不存在");
+        }
+        order.setShowOrder(showOrder);
+        orderService.updateById(order);
+        return R.success();
+    }
+
+    /**
+     * 保存精选照片（管理员选择的照片列表）
+     */
+    @Operation(summary = "保存精选照片")
+    @PostMapping("/order/featured-photos/{id}")
+    public R<Void> saveFeaturedPhotos(@PathVariable Long id, @RequestBody java.util.Map<String, Object> body) {
+        Order order = orderService.getById(id);
+        if (order == null) {
+            return R.error("订单不存在");
+        }
+        String photos = (String) body.get("photos");
+        order.setFeaturedPhotos(photos);
+        order.setIsPhotoFeatured(photos != null && !photos.isEmpty() ? 1 : 0);
+        orderService.updateById(order);
+        return R.success();
+    }
+
+    /**
+     * 获取精选照片列表（首页展示用）
+     */
+    @Operation(summary = "获取精选照片")
+    @GetMapping("/orders/photo-featured")
+    public R<List<java.util.Map<String, Object>>> getPhotoFeaturedOrders() {
+        List<Order> orders = orderService.list(
+            new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<Order>()
+                .eq(Order::getIsPhotoFeatured, 1)
+                .eq(Order::getStatus, com.xiyiji.common.constant.OrderStatus.COMPLETED)
+                .orderByAsc(Order::getShowOrder)
+        );
+        
+        java.util.List<java.util.Map<String, Object>> result = new java.util.ArrayList<>();
+        for (Order o : orders) {
+            java.util.Map<String, Object> item = new java.util.HashMap<>();
+            item.put("id", o.getId());
+            item.put("beforePhoto", o.getBeforePhoto());
+            item.put("afterPhoto", o.getAfterPhoto());
+            item.put("featuredPhotos", o.getFeaturedPhotos());
+            item.put("buildingName", o.getBuildingName());
+            item.put("showOrder", o.getShowOrder());
+            item.put("completeTime", o.getCompleteTime());
+            result.add(item);
+        }
         return R.success(result);
     }
 }

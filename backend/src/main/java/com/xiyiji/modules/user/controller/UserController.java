@@ -1,5 +1,6 @@
 package com.xiyiji.modules.user.controller;
 
+import com.xiyiji.common.constant.OrderStatus;
 import com.xiyiji.common.result.R;
 import com.xiyiji.modules.employee.entity.EmployeeApplication;
 import com.xiyiji.modules.employee.service.EmployeeService;
@@ -36,6 +37,9 @@ public class UserController {
 
     @Resource
     private OrderStatusLogService orderStatusLogService;
+
+    @Resource
+    private com.xiyiji.modules.review.service.OrderReviewService orderReviewService;
 
     @Resource
     private HttpServletRequest request;
@@ -265,5 +269,61 @@ public class UserController {
     @GetMapping("/order/logs/{orderId}")
     public R<List<OrderStatusLog>> getOrderLogs(@PathVariable Long orderId) {
         return R.success(orderStatusLogService.getOrderLogs(orderId));
+    }
+
+    /**
+     * 获取首页精选评价（无需登录）
+     */
+    @GetMapping("/reviews/featured")
+    public R<List<Map<String, Object>>> getFeaturedReviews() {
+        com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<com.xiyiji.modules.review.entity.OrderReview> wrapper =
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<>();
+        wrapper.eq(com.xiyiji.modules.review.entity.OrderReview::getIsFeatured, 1)
+               .orderByDesc(com.xiyiji.modules.review.entity.OrderReview::getCreateTime)
+               .last("LIMIT 6");
+        
+        List<com.xiyiji.modules.review.entity.OrderReview> reviews = orderReviewService.list(wrapper);
+        List<Map<String, Object>> result = new java.util.ArrayList<>();
+        
+        for (com.xiyiji.modules.review.entity.OrderReview r : reviews) {
+            Map<String, Object> item = new java.util.HashMap<>();
+            item.put("id", r.getId());
+            item.put("score", r.getScore());
+            item.put("content", r.getContent());
+            item.put("createTime", r.getCreateTime());
+            if (r.getUserId() != null) {
+                User user = userService.getById(r.getUserId());
+                item.put("nickname", user != null ? user.getNickname() : "匿名用户");
+                item.put("avatar", user != null ? user.getAvatar() : null);
+            }
+            result.add(item);
+        }
+        return R.success(result);
+    }
+
+    /**
+     * 获取首页精选照片（无需登录）
+     */
+    @GetMapping("/photos/featured")
+    public R<List<Map<String, Object>>> getFeaturedPhotos() {
+        List<Order> orders = orderService.list(
+            new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<Order>()
+                .eq(Order::getIsPhotoFeatured, 1)
+                .eq(Order::getStatus, OrderStatus.COMPLETED)
+                .orderByAsc(Order::getShowOrder)
+        );
+        
+        List<Map<String, Object>> result = new java.util.ArrayList<>();
+        for (Order o : orders) {
+            Map<String, Object> item = new java.util.HashMap<>();
+            item.put("id", o.getId());
+            item.put("beforePhoto", o.getBeforePhoto());
+            item.put("afterPhoto", o.getAfterPhoto());
+            item.put("featuredPhotos", o.getFeaturedPhotos());
+            item.put("buildingName", o.getBuildingName());
+            item.put("showOrder", o.getShowOrder());
+            result.add(item);
+        }
+        return R.success(result);
     }
 }

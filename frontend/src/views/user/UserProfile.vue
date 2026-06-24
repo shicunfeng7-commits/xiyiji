@@ -411,15 +411,15 @@ async function handleLogin() {
   loading.value = true
   try {
     const res = await post<any>('/api/auth/login', { phone: phone.value })
-    const { token, user } = res.data.data
-    pendingUser = user
+    const { token, userInfo } = res.data.data
+    pendingUser = userInfo
     setToken(token)
-    setUserInfo(user)
+    setUserInfo(userInfo)
 
     // 如果是新用户或未设置楼栋，弹窗完善信息
-    if (!user.buildingName || !user.roomNo) {
-      setupBuilding.value = user.buildingName || ''
-      setupRoom.value = user.roomNo || ''
+    if (!userInfo.buildingName || !userInfo.roomNo) {
+      setupBuilding.value = userInfo.buildingName || ''
+      setupRoom.value = userInfo.roomNo || ''
       showSetupDialog.value = true
     }
     handleLoginSuccess()

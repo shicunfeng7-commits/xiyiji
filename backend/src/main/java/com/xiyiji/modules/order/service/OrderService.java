@@ -16,7 +16,7 @@ public interface OrderService extends IService<Order> {
     List<Order> getAvailableOrders(); // 待抢单列表
     List<Order> getUserOrders(Long userId);
     List<Order> getEmployeeOrders(Long employeeId);
-    List<Order> getAllOrders(Integer status, String sort, String order, String keyword);
+    List<Order> getAllOrders(Integer status, Integer featured, String sort, String order, String keyword);
     Order getOrderDetail(Long id, Long userId);
     boolean cancelOrder(Long id, Long userId);
 }

@@ -23,9 +23,9 @@
           :key="step.status"
           class="timeline-item"
           :class="{
-            completed: step.status <= currentStatus,
+            completed: getStepIndex(step.status) <= getStepIndex(currentStatus),
             current: step.status === currentStatus,
-            pending: step.status > currentStatus,
+            pending: getStepIndex(step.status) > getStepIndex(currentStatus),
           }"
         >
           <div class="timeline-node">
@@ -140,7 +140,7 @@
     </div>
 
     <!-- 评价弹窗 -->
-    <van-dialog v-model:show="showReviewModal" title="评价服务" show-cancel-button>
+    <van-dialog v-model:show="showReviewModal" title="评价服务" show-cancel-button :before-close="beforeCloseReview">
       <div class="review-modal-content">
         <div class="review-score-section">
           <div class="score-label">评分</div>
@@ -168,9 +168,6 @@
           <div class="input-count">{{ reviewContent.length }}/500</div>
         </div>
       </div>
-      <template #confirm>
-        <button class="confirm-btn" @click="submitReview">提交评价</button>
-      </template>
     </van-dialog>
     </template>
   </div>
@@ -215,6 +212,7 @@ function parsePhotos(item: any) {
 const timelineSteps = [
   { status: 0, label: '订单创建', icon: 'circle-o' },
   { status: 1, label: '已支付', icon: 'check-circle-o' },
+  { status: 5, label: '待服务', icon: 'clock-o' },
   { status: 2, label: '服务中', icon: 'clock-o' },
   { status: 3, label: '已完成', icon: 'success' },
 ]
@@ -223,10 +221,11 @@ const currentStatus = computed(() => order.value?.status ?? 0)
 
 const statusMap: Record<number, { text: string; class: string }> = {
   0: { text: '未支付', class: 'status-unpaid' },
-  1: { text: '待服务', class: 'status-paid' },
+  1: { text: '已支付', class: 'status-paid' },
   2: { text: '服务中', class: 'status-progress' },
   3: { text: '已完成', class: 'status-completed' },
   4: { text: '已取消', class: 'status-cancelled' },
+  5: { text: '待服务', class: 'status-paid' },
 }
 
 const statusTextMap: Record<number, string> = {
@@ -235,6 +234,7 @@ const statusTextMap: Record<number, string> = {
   2: '服务中',
   3: '已完成',
   4: '已取消',
+  5: '待服务',
 }
 
 function getStatusText(status?: number): string {
@@ -248,8 +248,15 @@ function getStatusClass(status?: number): string {
 function getStepTime(status: number): string {
   if (status === 0) return order.value?.createTime?.substring(0, 16) || ''
   if (status === 1) return order.value?.payTime?.substring(0, 16) || ''
+  if (status === 5) return order.value?.payTime?.substring(0, 16) || ''
   if (status === 3) return order.value?.completeTime?.substring(0, 16) || ''
   return ''
+}
+
+function getStepIndex(status: number): number {
+  const order = [0, 1, 5, 2, 3]
+  const idx = order.indexOf(status)
+  return idx === -1 ? 0 : idx
 }
 
 function formatTime(timeStr?: string): string {
@@ -277,6 +284,14 @@ const scoreText = computed(() => {
   const texts = ['', '非常差', '差', '一般', '好', '非常好']
   return texts[reviewScore.value] || ''
 })
+
+async function beforeCloseReview(action: string): Promise<boolean> {
+  if (action === 'confirm') {
+    await submitReview()
+    return false
+  }
+  return true
+}
 
 async function loadReview() {
   if (order.value?.status !== 3) return
@@ -377,12 +392,10 @@ function goHome() {
   router.push('/user/home')
 }
 
-onMounted(() => {
-  loadOrder()
+onMounted(async () => {
+  await loadOrder()
   loadLogs()
-  setTimeout(() => {
-    loadReview()
-  }, 500)
+  loadReview()
 })
 </script>
 

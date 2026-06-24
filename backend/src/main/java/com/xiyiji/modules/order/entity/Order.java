@@ -30,6 +30,12 @@ public class Order {
     private String remark;
     private String beforePhoto;
     private String afterPhoto;
+    /** 是否展示照片：0-否，1-是 */
+    private Integer isPhotoFeatured;
+    /** 展示顺序：0不展示，数字越小越靠前 */
+    private Integer showOrder;
+    /** 展示的照片列表（JSON数组） */
+    private String featuredPhotos;
     private LocalDateTime createTime;
     private LocalDateTime payTime;
     private LocalDateTime completeTime;

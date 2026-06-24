@@ -226,10 +226,13 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     }
 
     @Override
-    public List<Order> getAllOrders(Integer status, String sort, String order, String keyword) {
+    public List<Order> getAllOrders(Integer status, Integer featured, String sort, String order, String keyword) {
         LambdaQueryWrapper<Order> wrapper = new LambdaQueryWrapper<>();
         if (status != null) {
             wrapper.eq(Order::getStatus, status);
+        }
+        if (featured != null) {
+            wrapper.eq(Order::getIsPhotoFeatured, featured);
         }
         if (keyword != null && !keyword.isEmpty()) {
             wrapper.and(w -> w.like(Order::getOrderNo, keyword).or().like(Order::getUserName, keyword));

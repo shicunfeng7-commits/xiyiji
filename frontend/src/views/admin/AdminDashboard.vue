@@ -65,7 +65,7 @@
       <h2 class="section-title">营收趋势</h2>
       <div class="chart-scroll" v-if="revenueTrend.length > 7">
         <div class="chart-bars" :style="{ width: (revenueTrend.length * 44) + 'px' }">
-          <div v-for="(item, i) in revenueTrend" :key="i" class="chart-col" style="width:40px">
+          <div v-for="(item, i) in revenueTrend" :key="i" class="chart-col" :class="{ 'is-today': isToday(i) }" style="width:40px">
             <div class="chart-bar" :style="{ height: (item.percentage || 4) + '%' }">
               <span class="bar-val">¥{{ item.amount }}</span>
             </div>
@@ -125,6 +125,11 @@ const buildingRanking = ref<any[]>([])
 
 function switchRange(key: string) { dateRange.value = key; loadData() }
 
+function isToday(index: number) {
+  if (dateRange.value !== 'month') return false
+  return index === new Date().getDate() - 1
+}
+
 function handleLogout() {
   showDialog({
     title: '确认退出',
@@ -166,6 +171,18 @@ async function loadData() {
       revenueTrend.value = rd.map((i: any) => ({
         label: i.label, amount: i.amount || 0, percentage: Math.round(((i.amount || 0) / max) * 100),
       }))
+
+      // 本月模式下，自动滚动到当天位置
+      if (dateRange.value === 'month') {
+        const today = new Date().getDate()
+        const barWidth = 44
+        const containerWidth = window.innerWidth - 64
+        const scrollTo = (today - 1) * barWidth - containerWidth / 2
+        setTimeout(() => {
+          const el = document.querySelector('.chart-scroll')
+          if (el) el.scrollLeft = Math.max(0, scrollTo)
+        }, 100)
+      }
 
       const bd = d.buildingRanking || []
       const bMax = Math.max(...bd.map((i: any) => i.count || 0), 1)
@@ -244,6 +261,9 @@ onMounted(loadData)
 .chart-scroll::-webkit-scrollbar { display: none; }
 .chart-bars { display: flex; justify-content: space-between; align-items: flex-end; height: 140px; padding-top: 28px; min-width: 100%; }
 .chart-col { display: flex; flex-direction: column; align-items: center; height: 100%; justify-content: flex-end; }
+.chart-col.is-today .bar-label { color: #1D1D1F; font-weight: 800; font-size: 12px; }
+.chart-col.is-today .bar-val { color: #1D1D1F; font-weight: 700; }
+.chart-col.is-today .chart-bar { background: #007AFF; }
 .chart-bar { width: 24px; background: #1D1D1F; border-radius: 6px 6px 0 0; position: relative; transition: height 0.5s cubic-bezier(0.25,0.1,0.25,1); min-height: 4px; }
 .bar-val { position: absolute; top: -22px; left: 50%; transform: translateX(-50%); font-size: 9px; color: #86868B; white-space: nowrap; }
 .bar-label { font-size: 10px; color: #C7C7CC; margin-top: 6px; }

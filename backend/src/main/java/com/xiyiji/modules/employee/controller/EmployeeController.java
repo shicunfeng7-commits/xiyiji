@@ -27,6 +27,9 @@ public class EmployeeController {
     @Resource
     private OrderService orderService;
 
+    @Resource
+    private com.xiyiji.modules.review.service.OrderReviewService orderReviewService;
+
     @Operation(summary = "获取当前员工信息")
     @GetMapping("/info")
     public R<Employee> getInfo() {
@@ -169,5 +172,15 @@ public class EmployeeController {
         result.put("totalRevenue", totalRevenue);
         result.put("range", range);
         return R.success(result);
+    }
+
+    /**
+     * 获取订单的用户评价（员工查看）
+     */
+    @Operation(summary = "获取订单评价")
+    @GetMapping("/order/review/{orderId}")
+    public R<com.xiyiji.modules.review.entity.OrderReview> getOrderReview(@PathVariable Long orderId) {
+        com.xiyiji.modules.review.entity.OrderReview review = orderReviewService.getReviewByOrderId(orderId);
+        return R.success(review);
     }
 }

@@ -1,5 +1,6 @@
 package com.xiyiji.modules.review.service.impl;
 
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.xiyiji.modules.order.entity.Order;
 import com.xiyiji.modules.order.mapper.OrderMapper;
 import com.xiyiji.modules.review.entity.OrderReview;
@@ -12,7 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 
 @Service
-public class OrderReviewServiceImpl implements OrderReviewService {
+public class OrderReviewServiceImpl extends ServiceImpl<OrderReviewMapper, OrderReview> implements OrderReviewService {
 
     @Resource
     private OrderReviewMapper orderReviewMapper;
