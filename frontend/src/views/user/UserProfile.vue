@@ -51,8 +51,8 @@
       <div class="login-section">
         <div class="login-card">
           <h2 class="login-title">欢迎回来</h2>
-          <p class="login-desc">输入手机号即可登录或注册</p>
-          
+          <p class="login-desc">输入手机号和验证码登录或注册</p>
+
           <div class="input-wrapper">
             <div class="phone-input-group" :class="{ focused: inputFocused, error: phoneError }">
               <span class="country-code">+86</span>
@@ -74,10 +74,33 @@
             <p v-if="phoneError" class="error-text">{{ phoneError }}</p>
           </div>
 
-          <button 
-            class="login-button" 
-            :class="{ active: isValidPhone, submitting: loading }" 
-            :disabled="!isValidPhone || loading" 
+          <div class="input-wrapper">
+            <div class="phone-input-group code-input-group" :class="{ focused: codeFocused }">
+              <input
+                v-model="code"
+                type="text"
+                maxlength="6"
+                placeholder="请输入验证码"
+                class="phone-input code-input"
+                @focus="codeFocused = true"
+                @blur="codeFocused = false"
+                @keydown.enter.prevent="handleLogin"
+              />
+              <button
+                class="send-code-btn"
+                :disabled="!isValidPhone || countdown > 0 || smsLoading"
+                @click="sendSmsCode"
+              >
+                <van-loading v-if="smsLoading" size="14px" color="#007AFF" />
+                <span v-else>{{ countdown > 0 ? countdown + 's' : '获取验证码' }}</span>
+              </button>
+            </div>
+          </div>
+
+          <button
+            class="login-button"
+            :class="{ active: canLogin, submitting: loading }"
+            :disabled="!canLogin || loading"
             @click="handleLogin"
           >
             <van-loading v-if="loading" size="20px" color="white" />
@@ -279,10 +302,15 @@ const cameraInput = ref<HTMLInputElement|null>(null)
 
 // 登录相关
 const phone = ref('')
+const code = ref('')
 const inputFocused = ref(false)
+const codeFocused = ref(false)
 const phoneInput = ref<HTMLInputElement | null>(null)
 const loading = ref(false)
+const smsLoading = ref(false)
 const phoneError = ref('')
+const countdown = ref(0)
+let countdownTimer: ReturnType<typeof setInterval> | null = null
 
 // 完善信息相关
 const showSetupDialog = ref(false)
@@ -300,6 +328,7 @@ const loginExpanding = ref(false)
 const isSubmitting = ref(false)
 
 const isValidPhone = computed(() => /^1[3-9]\d{9}$/.test(phone.value))
+const canLogin = computed(() => isValidPhone.value && code.value.length === 6)
 
 // 格式化时间
 function formatTime(time: unknown): string {
@@ -337,6 +366,29 @@ function onPhonePaste(e: ClipboardEvent) {
   e.preventDefault()
   const text = e.clipboardData?.getData('text') || ''
   phone.value = text.replace(/\D/g, '').substring(0, 11)
+}
+
+async function sendSmsCode() {
+  if (!isValidPhone.value || countdown.value > 0 || smsLoading.value) return
+  const error = validatePhone(phone.value)
+  if (error) { phoneError.value = error; return }
+  smsLoading.value = true
+  try {
+    await post<any>('/api/auth/sms/send', { phone: phone.value })
+    showToast('验证码已发送')
+    countdown.value = 60
+    countdownTimer = setInterval(() => {
+      countdown.value--
+      if (countdown.value <= 0) {
+        clearInterval(countdownTimer!)
+        countdownTimer = null
+      }
+    }, 1000)
+  } catch {
+    showToast('验证码发送失败')
+  } finally {
+    smsLoading.value = false
+  }
 }
 
 // 验证 token 是否有效
@@ -400,23 +452,22 @@ async function checkAuth() {
 }
 
 async function handleLogin() {
-  if (!isValidPhone.value || loading.value) return
-  
+  if (!canLogin.value || loading.value) return
+
   const error = validatePhone(phone.value)
   if (error) {
     phoneError.value = error
     return
   }
-  
+
   loading.value = true
   try {
-    const res = await post<any>('/api/auth/login', { phone: phone.value })
+    const res = await post<any>('/api/auth/login', { phone: phone.value, code: code.value })
     const { token, userInfo } = res.data.data
     pendingUser = userInfo
     setToken(token)
     setUserInfo(userInfo)
 
-    // 如果是新用户或未设置楼栋，弹窗完善信息
     if (!userInfo.buildingName || !userInfo.roomNo) {
       setupBuilding.value = userInfo.buildingName || ''
       setupRoom.value = userInfo.roomNo || ''
@@ -424,8 +475,10 @@ async function handleLogin() {
     }
     handleLoginSuccess()
     phone.value = ''
-  } catch {
-    showToast('登录失败，请稍后重试')
+    code.value = ''
+  } catch (e: any) {
+    const msg = e?.response?.data?.msg || '登录失败，请稍后重试'
+    showToast(msg)
   } finally {
     loading.value = false
   }
@@ -790,6 +843,27 @@ onMounted(() => {
   font-size: 12px;
   color: var(--danger);
   margin: 6px 0 0;
+}
+.code-input-group {
+  margin-top: 12px;
+}
+.code-input {
+  flex: 1;
+}
+.send-code-btn {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: var(--primary);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 8px 0;
+  white-space: nowrap;
+}
+.send-code-btn:disabled {
+  color: var(--text-tertiary);
+  cursor: not-allowed;
 }
 
 .login-button {

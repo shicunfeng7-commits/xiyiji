@@ -50,6 +50,7 @@ public class WebConfig implements WebMvcConfigurer {
                         "/api/user/photos/featured",
                         "/api/admin/login",
                         "/api/auth/login",
+                        "/api/auth/sms/send",
                         "/api/auth/admin/login",
                         "/ws/**"
                 );

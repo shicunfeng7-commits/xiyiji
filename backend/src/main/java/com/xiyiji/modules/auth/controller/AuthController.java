@@ -7,6 +7,7 @@ import com.xiyiji.common.util.JwtTokenUtil;
 import com.xiyiji.common.vo.LoginVO;
 import com.xiyiji.common.vo.UserInfoVO;
 import com.xiyiji.modules.auth.service.AuthService;
+import com.xiyiji.modules.auth.service.SmsService;
 import com.xiyiji.modules.user.entity.User;
 import com.xiyiji.modules.user.mapper.UserMapper;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -17,6 +18,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -32,10 +35,28 @@ public class AuthController {
     @Resource
     private PasswordEncoder passwordEncoder;
 
+    @Resource
+    private SmsService smsService;
+
+    @Operation(summary = "发送验证码")
+    @PostMapping("/sms/send")
+    public R<Void> sendSmsCode(@RequestBody Map<String, String> body) {
+        String phone = body.get("phone");
+        if (phone == null || phone.isBlank()) {
+            return R.error("手机号不能为空");
+        }
+        try {
+            smsService.sendCode(phone);
+            return R.success();
+        } catch (RuntimeException e) {
+            return R.error(e.getMessage());
+        }
+    }
+
     @Operation(summary = "用户/员工手机号登录")
     @PostMapping("/login")
     public R<LoginVO> login(@Valid @RequestBody UserLoginDTO dto) {
-        return R.success(authService.login(dto.getPhone()));
+        return R.success(authService.login(dto.getPhone(), dto.getCode()));
     }
 
     @Operation(summary = "获取当前登录用户信息")

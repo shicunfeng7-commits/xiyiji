@@ -21,18 +21,36 @@ public class AuthService {
     @Resource
     private EmployeeMapper employeeMapper;
 
-    public LoginVO login(String phone) {
+    @Resource
+    private SmsService smsService;
+
+    public LoginVO login(String phone, String code) {
         User user = userMapper.selectByPhone(phone);
-        if (user == null) {
-            user = new User();
-            user.setPhone(phone);
-            user.setNickname("用户" + phone.substring(phone.length() - 4));
-            user.setRole(2);
-            user.setCreateTime(LocalDateTime.now());
-            user.setUpdateTime(LocalDateTime.now());
-            userMapper.insert(user);
+
+        if (user != null) {
+            return buildLoginVO(user);
         }
 
+        if (code == null || code.isBlank()) {
+            throw new RuntimeException("该手机号未注册，请输入验证码完成注册");
+        }
+
+        if (!smsService.verifyCode(phone, code)) {
+            throw new RuntimeException("验证码错误或已过期");
+        }
+
+        user = new User();
+        user.setPhone(phone);
+        user.setNickname("用户" + phone.substring(phone.length() - 4));
+        user.setRole(2);
+        user.setCreateTime(LocalDateTime.now());
+        user.setUpdateTime(LocalDateTime.now());
+        userMapper.insert(user);
+
+        return buildLoginVO(user);
+    }
+
+    private LoginVO buildLoginVO(User user) {
         String roleStr;
         if (user.getRole() == 0) {
             roleStr = "admin";
