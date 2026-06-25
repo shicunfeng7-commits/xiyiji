@@ -328,7 +328,7 @@ const loginExpanding = ref(false)
 const isSubmitting = ref(false)
 
 const isValidPhone = computed(() => /^1[3-9]\d{9}$/.test(phone.value))
-const canLogin = computed(() => isValidPhone.value && code.value.length === 6)
+const canLogin = computed(() => isValidPhone.value)
 
 // 格式化时间
 function formatTime(time: unknown): string {
@@ -462,7 +462,9 @@ async function handleLogin() {
 
   loading.value = true
   try {
-    const res = await post<any>('/api/auth/login', { phone: phone.value, code: code.value })
+    const body: any = { phone: phone.value }
+    if (code.value) body.code = code.value
+    const res = await post<any>('/api/auth/login', body)
     const { token, userInfo } = res.data.data
     pendingUser = userInfo
     setToken(token)

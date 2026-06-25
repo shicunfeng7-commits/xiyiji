@@ -140,15 +140,15 @@
     <van-dialog v-model:show="showDragSort" title="调整照片顺序" :show-cancel-button="false" confirm-button-text="完成" @confirm="saveDragOrder">
       <div class="drag-sort-content">
         <div class="drag-sort-hint">长按拖动调整顺序</div>
-        <div class="drag-sort-list">
+        <div class="drag-sort-list" ref="dragSortListRef">
           <div
             v-for="(photo, index) in dragPhotos"
             :key="index"
             class="drag-sort-item"
-            draggable="true"
-            @dragstart="onDragStart(index)"
-            @dragover.prevent="onDragOver(index)"
-            @dragend="onDragEnd"
+            :class="{ 'dragging': dragIndex === index }"
+            @touchstart.prevent="onTouchStart(index, $event)"
+            @touchmove.prevent="onTouchMove($event)"
+            @touchend.prevent="onTouchEnd"
           >
             <span class="drag-sort-num">{{ index + 1 }}</span>
             <img :src="photo" class="drag-sort-img" @error="onImgError" />
@@ -358,7 +358,10 @@ async function saveSelectedPhotos() {
 // 拖动排序相关
 const showDragSort = ref(false)
 const dragPhotos = ref<string[]>([])
-let dragFromIndex = 0
+const dragIndex = ref<number>(-1)
+const dragSortListRef = ref<HTMLElement | null>(null)
+let dragStartY = 0
+let dragStartIndex = 0
 const currentDragOrder = ref<any>(null)
 
 function showOrderDialog(o: any) {
@@ -367,18 +370,40 @@ function showOrderDialog(o: any) {
   showDragSort.value = true
 }
 
-function onDragStart(index: number) {
-  dragFromIndex = index
+function onTouchStart(index: number, e: TouchEvent) {
+  dragIndex.value = index
+  dragStartIndex = index
+  dragStartY = e.touches[0].clientY
 }
 
-function onDragOver(index: number) {
-  if (index === dragFromIndex) return
-  const item = dragPhotos.value.splice(dragFromIndex, 1)[0]
-  dragPhotos.value.splice(index, 0, item)
-  dragFromIndex = index
+function onTouchMove(e: TouchEvent) {
+  if (dragIndex.value < 0 || !dragSortListRef.value) return
+  const list = dragSortListRef.value
+  const items = list.querySelectorAll('.drag-sort-item')
+  const listRect = list.getBoundingClientRect()
+
+  for (let i = 0; i < items.length; i++) {
+    const rect = items[i].getBoundingClientRect()
+    const midY = rect.top + rect.height / 2
+    if (e.touches[0].clientY < midY && i !== dragIndex.value) {
+      const item = dragPhotos.value.splice(dragIndex.value, 1)[0]
+      dragPhotos.value.splice(i, 0, item)
+      dragIndex.value = i
+      break
+    }
+  }
+  // 处理拖到最后一个的情况
+  const lastRect = items[items.length - 1].getBoundingClientRect()
+  if (e.touches[0].clientY > lastRect.bottom && dragIndex.value < dragPhotos.value.length - 1) {
+    const item = dragPhotos.value.splice(dragIndex.value, 1)[0]
+    dragPhotos.value.push(item)
+    dragIndex.value = dragPhotos.value.length - 1
+  }
 }
 
-function onDragEnd() {}
+function onTouchEnd() {
+  dragIndex.value = -1
+}
 
 async function saveDragOrder() {
   if (!currentDragOrder.value) return
@@ -518,6 +543,7 @@ onMounted(loadOrders)
   transition: background 0.2s;
 }
 .drag-sort-item:active { background: #F0F0F5; cursor: grabbing; }
+.drag-sort-item.dragging { opacity: 0.5; background: #E8F0FE; }
 .drag-sort-num {
   width: 24px; height: 24px; background: #2B95FF; color: white;
   border-radius: 50%; display: flex; align-items: center; justify-content: center;

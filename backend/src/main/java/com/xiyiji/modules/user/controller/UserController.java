@@ -281,10 +281,10 @@ public class UserController {
         wrapper.eq(com.xiyiji.modules.review.entity.OrderReview::getIsFeatured, 1)
                .orderByDesc(com.xiyiji.modules.review.entity.OrderReview::getCreateTime)
                .last("LIMIT 6");
-        
+
         List<com.xiyiji.modules.review.entity.OrderReview> reviews = orderReviewService.list(wrapper);
         List<Map<String, Object>> result = new java.util.ArrayList<>();
-        
+
         for (com.xiyiji.modules.review.entity.OrderReview r : reviews) {
             Map<String, Object> item = new java.util.HashMap<>();
             item.put("id", r.getId());
@@ -295,6 +295,14 @@ public class UserController {
                 User user = userService.getById(r.getUserId());
                 item.put("nickname", user != null ? user.getNickname() : "匿名用户");
                 item.put("avatar", user != null ? user.getAvatar() : null);
+            }
+            if (r.getOrderId() != null) {
+                Order order = orderService.getById(r.getOrderId());
+                if (order != null) {
+                    item.put("beforePhoto", order.getBeforePhoto());
+                    item.put("afterPhoto", order.getAfterPhoto());
+                    item.put("featuredPhotos", order.getFeaturedPhotos());
+                }
             }
             result.add(item);
         }
@@ -322,6 +330,13 @@ public class UserController {
             item.put("featuredPhotos", o.getFeaturedPhotos());
             item.put("buildingName", o.getBuildingName());
             item.put("showOrder", o.getShowOrder());
+
+            com.xiyiji.modules.review.entity.OrderReview review = orderReviewService.getReviewByOrderId(o.getId());
+            if (review != null) {
+                item.put("score", review.getScore());
+                item.put("content", review.getContent());
+            }
+
             result.add(item);
         }
         return R.success(result);

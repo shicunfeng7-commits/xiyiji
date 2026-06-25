@@ -35,23 +35,19 @@
       </div>
     </div>
 
-    <!-- 服务展示（左右滑动） -->
-    <div class="showcase-section" v-if="featuredPhotos.length > 0">
+    <!-- 服务展示 -->
+    <div class="reviews-section" v-if="featuredPhotos.length > 0">
       <div class="section-title">服务展示</div>
-      <div class="showcase-scroll">
-        <div class="showcase-list">
-          <div class="showcase-card" v-for="p in featuredPhotos" :key="p.id" @click="openShowcaseDetail(p)">
-            <div class="showcase-photos">
-              <img
-                v-for="(url, i) in getShowcasePhotos(p).slice(0, 2)"
-                :key="i"
-                :src="url"
-                class="showcase-img"
-                @error="onImgError"
-              />
-            </div>
-            <div class="showcase-location">{{ p.buildingName }}</div>
+      <div class="reviews-list">
+        <div class="review-card" v-for="p in featuredPhotos" :key="p.id">
+          <div class="review-photos" v-if="getShowcasePhotos(p).length > 0">
+            <img v-for="(url, i) in getShowcasePhotos(p).slice(0, 2)" :key="i" :src="url" class="review-photo" @error="onImgError" />
           </div>
+          <div class="showcase-location">{{ p.buildingName }}</div>
+          <div class="review-stars" v-if="p.score">
+            <span v-for="s in 5" :key="s" :class="s <= p.score ? 'star active' : 'star'">★</span>
+          </div>
+          <div class="review-content" v-if="p.content">{{ p.content }}</div>
         </div>
       </div>
     </div>
@@ -70,36 +66,6 @@
       </div>
     </div>
 
-    <!-- 精选评价 -->
-    <div class="reviews-section" v-if="reviews.length > 0">
-      <div class="section-title">用户评价</div>
-      <div class="reviews-list">
-        <div class="review-card" v-for="r in reviews" :key="r.id">
-          <div class="review-header">
-            <div class="review-avatar">
-              <img v-if="r.avatar" :src="r.avatar" />
-              <span v-else>{{ (r.nickname || '匿')[0] }}</span>
-            </div>
-            <div class="review-info">
-              <div class="review-name">{{ r.nickname || '匿名用户' }}</div>
-              <div class="review-stars">
-                <span v-for="s in 5" :key="s" :class="s <= r.score ? 'star active' : 'star'">★</span>
-              </div>
-            </div>
-          </div>
-          <div class="review-content">{{ r.content }}</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 服务展示详情弹窗 -->
-    <van-dialog v-model:show="showDetail" title="服务展示" :show-cancel-button="false" confirm-button-text="关闭">
-      <div class="detail-photos" v-if="detailPhotos.length > 0">
-        <img v-for="(url, i) in detailPhotos" :key="i" :src="url" class="detail-img" @error="onImgError" />
-      </div>
-      <div class="detail-location" v-if="detailPhoto">{{ detailPhoto.buildingName }}</div>
-    </van-dialog>
-
     <!-- Bottom CTA -->
     <div class="bottom-cta">
       <button class="cta-btn" @click="goCreate">立即预约清洗</button>
@@ -116,9 +82,6 @@ const router = useRouter()
 
 const reviews = ref<any[]>([])
 const featuredPhotos = ref<any[]>([])
-const showDetail = ref(false)
-const detailPhotos = ref<string[]>([])
-const detailPhoto = ref<any>(null)
 
 const features = [
   { title: '专业清洗', desc: '高温消毒除垢', icon: 'certificate', color: '#2B95FF', bg: 'rgba(43,149,255,0.1)' },
@@ -176,6 +139,18 @@ function getAllPhotos(photosJson: string): string[] {
   }
 }
 
+function onImgError(e: Event) {
+  (e.target as HTMLImageElement).style.display = 'none'
+}
+
+function getReviewPhotos(r: any): string[] {
+  const featured = getAllPhotos(r.featuredPhotos)
+  if (featured.length > 0) return featured
+  const before = getFirstPhoto(r.beforePhoto)
+  const after = getFirstPhoto(r.afterPhoto)
+  return [before, after].filter(Boolean)
+}
+
 function getShowcasePhotos(p: any): string[] {
   const featured = getAllPhotos(p.featuredPhotos)
   if (featured.length > 0) return featured
@@ -184,22 +159,11 @@ function getShowcasePhotos(p: any): string[] {
   return [before, after].filter(Boolean)
 }
 
-function openShowcaseDetail(photo: any) {
-  detailPhoto.value = photo
-  const featured = getAllPhotos(photo.featuredPhotos)
-  if (featured.length > 0) {
-    detailPhotos.value = featured
-  } else {
-    detailPhotos.value = [
-      ...getAllPhotos(photo.beforePhoto),
-      ...getAllPhotos(photo.afterPhoto)
-    ]
-  }
-  showDetail.value = true
-}
-
-function onImgError(e: Event) {
-  (e.target as HTMLImageElement).style.display = 'none'
+function formatDate(time: unknown): string {
+  if (!time) return ''
+  const str = String(time)
+  if (str.length >= 10) return str.substring(0, 10)
+  return str
 }
 
 onMounted(() => {
@@ -293,24 +257,9 @@ onMounted(() => {
 .review-stars { display: flex; gap: 2px; }
 .star { font-size: 14px; color: #3a3a3c; }
 .star.active { color: #FFD60A; }
-.review-content { font-size: 13px; color: var(--color-text-secondary); line-height: 1.5; }
-
-.showcase-section { padding: 0 0 0 14px; }
-.showcase-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; padding-right: 14px; }
-.showcase-scroll::-webkit-scrollbar { display: none; }
-.showcase-list { display: flex; gap: 12px; }
-.showcase-card {
-  flex-shrink: 0; width: 200px;
-  background: rgba(255,255,255,0.04); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; padding: 12px;
-  cursor: pointer; transition: transform 0.2s;
-}
-.showcase-card:active { transform: scale(0.97); }
-.showcase-photos { display: flex; gap: 8px; margin-bottom: 8px; }
-.showcase-img { width: 88px; height: 88px; border-radius: 10px; object-fit: cover; background: rgba(255,255,255,0.06); }
-.showcase-location { font-size: 12px; color: var(--color-text-secondary); text-align: center; }
-
-.detail-photos { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
-.detail-img { width: 100%; border-radius: 10px; object-fit: cover; background: #F5F5F7; }
-.detail-location { text-align: center; font-size: 13px; color: #86868B; padding: 0 16px 16px; }
+.review-content { font-size: 13px; color: var(--color-text-secondary); line-height: 1.5; margin-bottom: 10px; }
+.review-photos { display: flex; gap: 8px; margin-bottom: 8px; }
+.review-photo { width: 72px; height: 72px; border-radius: 8px; object-fit: cover; background: rgba(255,255,255,0.06); }
+.review-date { font-size: 12px; color: rgba(255,255,255,0.3); }
+.showcase-location { font-size: 13px; color: var(--color-text-secondary); margin-bottom: 4px; }
 </style>
