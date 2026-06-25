@@ -24,6 +24,9 @@ public class AuthService {
     @Resource
     private SmsService smsService;
 
+    @Resource
+    private JwtTokenUtil jwtTokenUtil;
+
     public LoginVO login(String phone, String code) {
         User user = userMapper.selectByPhone(phone);
 
@@ -32,16 +35,16 @@ public class AuthService {
         }
 
         if (code == null || code.isBlank()) {
-            throw new RuntimeException("该手机号未注册，请输入验证码完成注册");
+            throw new RuntimeException("è¯¥ææºå·æªæ³¨åï¼è¯·è¾å¥éªè¯ç å®ææ³¨å");
         }
 
         if (!smsService.verifyCode(phone, code)) {
-            throw new RuntimeException("验证码错误或已过期");
+            throw new RuntimeException("éªè¯ç éè¯¯æå·²è¿æ");
         }
 
         user = new User();
         user.setPhone(phone);
-        user.setNickname("用户" + phone.substring(phone.length() - 4));
+        user.setNickname("ç¨æ·" + phone.substring(phone.length() - 4));
         user.setRole(2);
         user.setCreateTime(LocalDateTime.now());
         user.setUpdateTime(LocalDateTime.now());
@@ -59,7 +62,7 @@ public class AuthService {
         } else {
             roleStr = "user";
         }
-        String token = JwtTokenUtil.generateToken(user.getId(), user.getPhone(), roleStr);
+        String token = jwtTokenUtil.generateToken(user.getId(), user.getPhone(), roleStr);
 
         UserInfoVO userInfo = new UserInfoVO();
         userInfo.setId(user.getId());

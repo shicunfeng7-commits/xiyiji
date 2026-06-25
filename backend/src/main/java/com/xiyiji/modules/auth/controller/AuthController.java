@@ -23,7 +23,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
-@Tag(name = "认证接口", description = "登录、获取用户信息")
+@Tag(name = "è®¤è¯æ¥å£", description = "ç»å½ãè·åç¨æ·ä¿¡æ¯")
 public class AuthController {
 
     @Resource
@@ -38,12 +38,15 @@ public class AuthController {
     @Resource
     private SmsService smsService;
 
-    @Operation(summary = "发送验证码")
+    @Resource
+    private JwtTokenUtil jwtTokenUtil;
+
+    @Operation(summary = "åééªè¯ç ")
     @PostMapping("/sms/send")
     public R<Void> sendSmsCode(@RequestBody Map<String, String> body) {
         String phone = body.get("phone");
         if (phone == null || phone.isBlank()) {
-            return R.error("手机号不能为空");
+            return R.error("ææºå·ä¸è½ä¸ºç©º");
         }
         try {
             smsService.sendCode(phone);
@@ -53,19 +56,19 @@ public class AuthController {
         }
     }
 
-    @Operation(summary = "用户/员工手机号登录")
+    @Operation(summary = "ç¨æ·/åå·¥ææºå·ç»å½")
     @PostMapping("/login")
     public R<LoginVO> login(@Valid @RequestBody UserLoginDTO dto) {
         return R.success(authService.login(dto.getPhone(), dto.getCode()));
     }
 
-    @Operation(summary = "获取当前登录用户信息")
+    @Operation(summary = "è·åå½åç»å½ç¨æ·ä¿¡æ¯")
     @GetMapping("/user-info")
     public R<UserInfoVO> userInfo(HttpServletRequest request) {
         Long userId = (Long) request.getAttribute("userId");
         User user = userMapper.selectById(userId);
         if (user == null) {
-            return R.error("用户不存在");
+            return R.error("ç¨æ·ä¸å­å¨");
         }
         UserInfoVO vo = new UserInfoVO();
         vo.setId(user.getId());
@@ -79,7 +82,7 @@ public class AuthController {
         return R.success(vo);
     }
 
-    @Operation(summary = "管理员账号密码登录")
+    @Operation(summary = "ç®¡çåè´¦å·å¯ç ç»å½")
     @PostMapping("/admin/login")
     public R<LoginVO> adminLogin(@Valid @RequestBody AdminLoginDTO dto) {
         LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<User>()
@@ -88,7 +91,7 @@ public class AuthController {
         User user = userMapper.selectOne(wrapper);
 
         if (user != null && passwordEncoder.matches(dto.getPassword(), user.getPassword())) {
-            String token = JwtTokenUtil.generateToken(user.getId(), user.getPhone(), "admin");
+            String token = jwtTokenUtil.generateToken(user.getId(), user.getPhone(), "admin");
 
             UserInfoVO userInfo = new UserInfoVO();
             userInfo.setId(user.getId());
@@ -98,6 +101,6 @@ public class AuthController {
 
             return R.success(new LoginVO(token, userInfo));
         }
-        return R.error(401, "账号或密码错误");
+        return R.error(401, "è´¦å·æå¯ç éè¯¯");
     }
 }

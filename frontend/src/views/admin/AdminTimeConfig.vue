@@ -46,7 +46,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { showToast } from 'vant'
-import { get, put } from '../../utils/request'
+import { get, post } from '../../utils/request'
 
 interface Period {
   key: string
@@ -88,14 +88,14 @@ function onPickerConfirm() {
 
 async function fetchConfig() {
   try {
-    const res = await get<{ code: number; data: any[] }>('/api/admin/time-config/list')
+    const res = await get<{ code: number; data: any[] }>('/api/admin/time-configs')
     if (res.data.code === 200 && res.data.data) {
       res.data.data.forEach((item: any) => {
-        const p = periods.value.find(p => p.key === item.key)
+        const p = periods.value.find(p => p.key === item.period?.toLowerCase())
         if (p) {
           p.enabled = item.enabled
-          p.startTime = item.startTime
-          p.endTime = item.endTime
+          p.startTime = String(item.startHour).padStart(2, '0') + ':00'
+          p.endTime = String(item.endHour).padStart(2, '0') + ':00'
         }
       })
     }
@@ -103,15 +103,19 @@ async function fetchConfig() {
 }
 
 async function saveConfig() {
+  const periodKeyMap: Record<string, string> = { morning: 'MORNING', afternoon: 'AFTERNOON', evening: 'EVENING' }
+  const periodNameMap: Record<string, string> = { morning: '上午', afternoon: '下午', evening: '晚上' }
+  const sortOrderMap: Record<string, number> = { morning: 1, afternoon: 2, evening: 3 }
   const data = periods.value.map(p => ({
-    key: p.key,
-    label: p.label,
+    period: periodKeyMap[p.key] || p.key.toUpperCase(),
+    periodName: periodNameMap[p.key] || p.label,
+    startHour: parseInt(p.startTime.split(':')[0]),
+    endHour: parseInt(p.endTime.split(':')[0]),
     enabled: p.enabled,
-    startTime: p.startTime,
-    endTime: p.endTime,
+    sortOrder: sortOrderMap[p.key] || 0,
   }))
   try {
-    await put('/api/admin/time-config/update', data)
+    await post('/api/admin/time-configs', data)
     showToast('保存成功')
   } catch {
     showToast('保存失败')

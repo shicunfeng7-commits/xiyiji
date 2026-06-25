@@ -139,13 +139,14 @@
     <!-- 拖动排序弹窗 -->
     <van-dialog v-model:show="showDragSort" title="调整照片顺序" :show-cancel-button="false" confirm-button-text="完成" @confirm="saveDragOrder">
       <div class="drag-sort-content">
-        <div class="drag-sort-hint">长按拖动调整顺序</div>
+        <div class="drag-sort-hint">拖动调整顺序</div>
         <div class="drag-sort-list" ref="dragSortListRef">
           <div
             v-for="(photo, index) in dragPhotos"
-            :key="index"
+            :key="photo + '-' + index"
             class="drag-sort-item"
-            :class="{ 'dragging': dragIndex === index }"
+            :ref="(el) => { if (el) dragItemRefs[index] = el }"
+            :class="{ 'is-dragging': dragCurrentIndex === index }"
             @touchstart.prevent="onTouchStart(index, $event)"
             @touchmove.prevent="onTouchMove($event)"
             @touchend.prevent="onTouchEnd"
@@ -358,11 +359,11 @@ async function saveSelectedPhotos() {
 // 拖动排序相关
 const showDragSort = ref(false)
 const dragPhotos = ref<string[]>([])
-const dragIndex = ref<number>(-1)
 const dragSortListRef = ref<HTMLElement | null>(null)
-let dragStartY = 0
-let dragStartIndex = 0
+const dragItemRefs = ref<Record<number, HTMLElement>>({})
 const currentDragOrder = ref<any>(null)
+let dragCurrentIndex = -1
+let dragOffsetY = 0
 
 function showOrderDialog(o: any) {
   currentDragOrder.value = o
@@ -371,38 +372,50 @@ function showOrderDialog(o: any) {
 }
 
 function onTouchStart(index: number, e: TouchEvent) {
-  dragIndex.value = index
-  dragStartIndex = index
-  dragStartY = e.touches[0].clientY
+  const touch = e.touches[0]
+  const el = dragItemRefs.value[index]
+  if (!el) return
+  const rect = el.getBoundingClientRect()
+  dragCurrentIndex = index
+  dragOffsetY = touch.clientY - rect.top
+  el.classList.add('is-dragging')
 }
 
 function onTouchMove(e: TouchEvent) {
-  if (dragIndex.value < 0 || !dragSortListRef.value) return
-  const list = dragSortListRef.value
-  const items = list.querySelectorAll('.drag-sort-item')
-  const listRect = list.getBoundingClientRect()
+  if (dragCurrentIndex < 0) return
+  const touch = e.touches[0]
 
+  if (!dragSortListRef.value) return
+  const items = dragSortListRef.value.querySelectorAll('.drag-sort-item')
   for (let i = 0; i < items.length; i++) {
+    if (i === dragCurrentIndex) continue
     const rect = items[i].getBoundingClientRect()
     const midY = rect.top + rect.height / 2
-    if (e.touches[0].clientY < midY && i !== dragIndex.value) {
-      const item = dragPhotos.value.splice(dragIndex.value, 1)[0]
-      dragPhotos.value.splice(i, 0, item)
-      dragIndex.value = i
-      break
+    if (touch.clientY > rect.top && touch.clientY < rect.bottom) {
+      if (touch.clientY < midY && i < dragCurrentIndex) {
+        swapItems(dragCurrentIndex, i)
+        break
+      } else if (touch.clientY > midY && i > dragCurrentIndex) {
+        swapItems(dragCurrentIndex, i)
+        break
+      }
     }
-  }
-  // 处理拖到最后一个的情况
-  const lastRect = items[items.length - 1].getBoundingClientRect()
-  if (e.touches[0].clientY > lastRect.bottom && dragIndex.value < dragPhotos.value.length - 1) {
-    const item = dragPhotos.value.splice(dragIndex.value, 1)[0]
-    dragPhotos.value.push(item)
-    dragIndex.value = dragPhotos.value.length - 1
   }
 }
 
+function swapItems(from: number, to: number) {
+  const arr = [...dragPhotos.value]
+  const item = arr.splice(from, 1)[0]
+  arr.splice(to, 0, item)
+  dragPhotos.value = arr
+  dragCurrentIndex = to
+}
+
 function onTouchEnd() {
-  dragIndex.value = -1
+  Object.values(dragItemRefs.value).forEach(el => {
+    if (el) el.classList.remove('is-dragging')
+  })
+  dragCurrentIndex = -1
 }
 
 async function saveDragOrder() {
@@ -540,10 +553,10 @@ onMounted(loadOrders)
 .drag-sort-item {
   display: flex; align-items: center; gap: 12px; padding: 10px;
   background: #F9F9FB; border-radius: 12px; cursor: grab;
-  transition: background 0.2s;
+  transition: transform 0.25s cubic-bezier(0.2, 0, 0, 1), opacity 0.2s ease;
 }
-.drag-sort-item:active { background: #F0F0F5; cursor: grabbing; }
-.drag-sort-item.dragging { opacity: 0.5; background: #E8F0FE; }
+.drag-sort-item:active { cursor: grabbing; }
+.drag-sort-item.is-dragging { opacity: 0.3; transform: scale(0.96); }
 .drag-sort-num {
   width: 24px; height: 24px; background: #2B95FF; color: white;
   border-radius: 50%; display: flex; align-items: center; justify-content: center;

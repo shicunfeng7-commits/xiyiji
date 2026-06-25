@@ -40,14 +40,23 @@
       <div class="section-title">服务展示</div>
       <div class="reviews-list">
         <div class="review-card" v-for="p in featuredPhotos" :key="p.id">
+          <div class="review-header">
+            <div class="review-avatar">
+              <img v-if="p.avatar" :src="p.avatar" />
+              <span v-else>{{ (p.nickname || '匿')[0] }}</span>
+            </div>
+            <div class="review-info">
+              <div class="review-name">{{ p.nickname || '匿名用户' }}</div>
+              <div class="review-stars" v-if="p.score">
+                <span v-for="s in 5" :key="s" :class="s <= p.score ? 'star active' : 'star'">★</span>
+              </div>
+            </div>
+          </div>
+          <div class="review-content" v-if="p.content">{{ p.content }}</div>
           <div class="review-photos" v-if="getShowcasePhotos(p).length > 0">
             <img v-for="(url, i) in getShowcasePhotos(p).slice(0, 2)" :key="i" :src="url" class="review-photo" @error="onImgError" />
           </div>
-          <div class="showcase-location">{{ p.buildingName }}</div>
-          <div class="review-stars" v-if="p.score">
-            <span v-for="s in 5" :key="s" :class="s <= p.score ? 'star active' : 'star'">★</span>
-          </div>
-          <div class="review-content" v-if="p.content">{{ p.content }}</div>
+          <div class="review-date">{{ formatDate(p.createTime) }}</div>
         </div>
       </div>
     </div>
@@ -240,26 +249,27 @@ onMounted(() => {
 .cta-btn:active { transform: scale(0.98); }
 
 .reviews-section { padding: 0 14px; }
-.reviews-list { display: flex; flex-direction: column; gap: 10px; }
+.reviews-list { display: flex; gap: 10px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; padding-bottom: 4px; }
+.reviews-list::-webkit-scrollbar { display: none; }
 .review-card {
-  background: rgba(255,255,255,0.04); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; padding: 16px;
+  flex-shrink: 0; width: 200px;
+  background: white; border-radius: 12px; padding: 14px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
 }
-.review-header { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.review-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
 .review-avatar {
-  width: 40px; height: 40px; border-radius: 50%; background: var(--color-accent);
+  width: 36px; height: 36px; border-radius: 50%; background: #E8F0FE;
   display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0;
 }
 .review-avatar img { width: 100%; height: 100%; object-fit: cover; }
-.review-avatar span { color: white; font-size: 16px; font-weight: 700; }
-.review-info { flex: 1; }
-.review-name { font-size: 14px; font-weight: 600; color: var(--color-text-primary); margin-bottom: 2px; }
-.review-stars { display: flex; gap: 2px; }
-.star { font-size: 14px; color: #3a3a3c; }
+.review-avatar span { color: #2B95FF; font-size: 14px; font-weight: 700; }
+.review-info { flex: 1; min-width: 0; }
+.review-name { font-size: 13px; font-weight: 600; color: #1D1D1F; margin-bottom: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.review-stars { display: flex; gap: 1px; }
+.star { font-size: 12px; color: #D1D1D6; }
 .star.active { color: #FFD60A; }
-.review-content { font-size: 13px; color: var(--color-text-secondary); line-height: 1.5; margin-bottom: 10px; }
-.review-photos { display: flex; gap: 8px; margin-bottom: 8px; }
-.review-photo { width: 72px; height: 72px; border-radius: 8px; object-fit: cover; background: rgba(255,255,255,0.06); }
-.review-date { font-size: 12px; color: rgba(255,255,255,0.3); }
-.showcase-location { font-size: 13px; color: var(--color-text-secondary); margin-bottom: 4px; }
+.review-content { font-size: 12px; color: #636366; line-height: 1.5; margin-bottom: 8px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.review-photos { display: flex; gap: 6px; margin-bottom: 8px; }
+.review-photo { width: 82px; height: 82px; border-radius: 8px; object-fit: cover; background: #F5F5F7; }
+.review-date { font-size: 11px; color: #AEAEB2; }
 </style>

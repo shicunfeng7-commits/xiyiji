@@ -42,17 +42,20 @@ public class UserController {
     private com.xiyiji.modules.review.service.OrderReviewService orderReviewService;
 
     @Resource
+    private com.xiyiji.common.util.JwtTokenUtil jwtTokenUtil;
+
+    @Resource
     private HttpServletRequest request;
 
     /**
-     * 用户登录/注册（按手机号）
+     * /?
      */
-    @PostMapping("/login")
+    @PostMapping("/phone-login")
     public R<java.util.Map<String, Object>> login(@RequestBody java.util.Map<String, String> body) {
         String phone = body.get("phone");
         User user = userService.loginOrRegister(phone);
         String roleStr = user.getRole() != null && user.getRole() == 1 ? "employee" : "user";
-        String token = com.xiyiji.common.util.JwtTokenUtil.generateToken(user.getId(), user.getPhone(), roleStr);
+        String token = jwtTokenUtil.generateToken(user.getId(), user.getPhone(), roleStr);
         
         java.util.Map<String, Object> userInfo = new java.util.HashMap<>();
         userInfo.put("id", user.getId());
@@ -67,15 +70,14 @@ public class UserController {
     }
 
     /**
-     * 获取可用服务时间段
-     */
+     * ?     */
     @GetMapping("/time-slots")
     public R<List<ServiceTimeConfig>> getTimeSlots() {
         return R.success(timeConfigService.getEnabledConfigs());
     }
 
     /**
-     * 创建订单
+     * ?
      */
     @PostMapping("/order/create")
     public R<Order> createOrder(@RequestBody Order order) {
@@ -86,7 +88,7 @@ public class UserController {
             if (u != null) order.setUserName(u.getPhone());
             Order created = orderService.createOrder(order);
             
-            // 推送新订单通知给员工端
+            // ?
             java.util.Map<String, Object> message = new java.util.HashMap<>();
             message.put("type", "NEW_ORDER");
             message.put("orderId", created.getId());
@@ -106,13 +108,12 @@ public class UserController {
             return R.success(created);
         } catch (Exception e) {
             e.printStackTrace();
-            return R.error("订单创建失败: " + e.getMessage());
+            return R.error(e.getMessage());
         }
     }
 
     /**
-     * 我的订单列表（含员工姓名）
-     */
+     * ?     */
     @GetMapping("/order/list")
     public R<List<java.util.Map<String, Object>>> getOrders() {
         Long userId = (Long) request.getAttribute("userId");
@@ -138,7 +139,7 @@ public class UserController {
             map.put("afterPhoto", o.getAfterPhoto());
             if (o.getEmployeeId() != null) {
                 com.xiyiji.modules.employee.entity.Employee emp = employeeService.getById(o.getEmployeeId());
-                map.put("employeeName", emp != null ? emp.getName() : "未知");
+                map.put("employeeName", emp != null ? emp.getName() : "anonymous");
             } else {
                 map.put("employeeName", null);
             }
@@ -148,7 +149,7 @@ public class UserController {
     }
 
     /**
-     * 获取管理员微信二维码（从 user 表管理员记录中获取）
+     * ?user ?
      */
     @GetMapping("/admin/qrcode")
     public R<String> getAdminQrcode() {
@@ -156,7 +157,7 @@ public class UserController {
     }
 
     /**
-     * 订单详情
+     * ?
      */
     @GetMapping("/order/detail/{id}")
     public R<Order> getOrder(@PathVariable Long id) {
@@ -165,7 +166,7 @@ public class UserController {
     }
 
     /**
-     * 取消订单
+     * ?
      */
     @PostMapping("/order/cancel/{id}")
     public R<Void> cancelOrder(@PathVariable Long id) {
@@ -175,7 +176,7 @@ public class UserController {
     }
 
     /**
-     * 申请成为员工
+     * ?
      */
     @PostMapping("/apply-employee")
     public R<Void> applyEmployee(@RequestBody java.util.Map<String, String> body) {
@@ -189,8 +190,7 @@ public class UserController {
     }
 
     /**
-     * 查看申请状态
-     */
+     * ?     */
     @GetMapping("/apply-status")
     public R<EmployeeApplication> getApplyStatus() {
         Long userId = (Long) request.getAttribute("userId");
@@ -198,13 +198,13 @@ public class UserController {
     }
 
     /**
-     * 获取个人信息
+     * ?
      */
     @GetMapping("/profile")
     public R<Map<String, Object>> getProfile() {
         Long userId = (Long) request.getAttribute("userId");
         User user = userService.getById(userId);
-        if (user == null) return R.error("用户不存在");
+        if (user == null) return R.error("not found");
         
         Map<String, Object> result = new java.util.HashMap<>();
         result.put("id", user.getId());
@@ -220,13 +220,13 @@ public class UserController {
     }
 
     /**
-     * 更新个人信息
+     * ?
      */
     @PutMapping("/profile")
     public R<Void> updateProfile(@RequestBody java.util.Map<String, String> body) {
         Long userId = (Long) request.getAttribute("userId");
         com.xiyiji.modules.user.entity.User user = userService.getById(userId);
-        if (user == null) return R.error("用户不存在");
+        if (user == null) return R.error("not found");
         if (body.containsKey("nickname")) user.setNickname(body.get("nickname"));
         if (body.containsKey("avatar")) user.setAvatar(body.get("avatar"));
         if (body.containsKey("phone")) user.setPhone(body.get("phone"));
@@ -237,7 +237,7 @@ public class UserController {
     }
 
     /**
-     * 获取未读通知（员工申请审核结果）
+     * 
      */
     @GetMapping("/notifications")
     public R<java.util.Map<String, Object>> getNotifications() {
@@ -247,14 +247,14 @@ public class UserController {
         if (app != null) {
             if (app.getStatus() == 1) {
                 result.put("type", "approved");
-                result.put("message", "您的员工申请已通过");
+                result.put("message", "");
             } else if (app.getStatus() == 2) {
                 result.put("type", "rejected");
-                result.put("message", "您的员工申请已被拒绝：" + (app.getRemark() != null ? app.getRemark() : ""));
-                // 用户查看后标记为已读（删除申请记录或标记）
-            } else {
+                result.put("message", "" + (app.getRemark() != null ? app.getRemark() : ""));
+                // ?            } else {
                 result.put("type", "pending");
-                result.put("message", "申请审核中");
+                result.put("type", "none");
+                result.put("message", "");
             }
         } else {
             result.put("type", "none");
@@ -264,16 +264,14 @@ public class UserController {
     }
 
     /**
-     * 获取订单操作日志（用户端）
-     */
+     * ?     */
     @GetMapping("/order/logs/{orderId}")
     public R<List<OrderStatusLog>> getOrderLogs(@PathVariable Long orderId) {
         return R.success(orderStatusLogService.getOrderLogs(orderId));
     }
 
     /**
-     * 获取首页精选评价（无需登录）
-     */
+     * ?     */
     @GetMapping("/reviews/featured")
     public R<List<Map<String, Object>>> getFeaturedReviews() {
         com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<com.xiyiji.modules.review.entity.OrderReview> wrapper =
@@ -293,7 +291,7 @@ public class UserController {
             item.put("createTime", r.getCreateTime());
             if (r.getUserId() != null) {
                 User user = userService.getById(r.getUserId());
-                item.put("nickname", user != null ? user.getNickname() : "匿名用户");
+                item.put("nickname", user != null ? user.getNickname() : "");
                 item.put("avatar", user != null ? user.getAvatar() : null);
             }
             if (r.getOrderId() != null) {
@@ -310,8 +308,7 @@ public class UserController {
     }
 
     /**
-     * 获取首页精选照片（无需登录）
-     */
+     * ?     */
     @GetMapping("/photos/featured")
     public R<List<Map<String, Object>>> getFeaturedPhotos() {
         List<Order> orders = orderService.list(
@@ -331,10 +328,24 @@ public class UserController {
             item.put("buildingName", o.getBuildingName());
             item.put("showOrder", o.getShowOrder());
 
+            if (o.getUserId() != null) {
+                User user = userService.getById(o.getUserId());
+                if (user != null) {
+                    item.put("avatar", user.getAvatar());
+                    String nickname = user.getNickname();
+                    if (nickname != null && nickname.length() >= 2) {
+                        item.put("nickname", nickname.substring(0, 1) + "***" + nickname.substring(nickname.length() - 1));
+                    } else {
+                        item.put("nickname", nickname != null ? nickname : "");
+                    }
+                }
+            }
+
             com.xiyiji.modules.review.entity.OrderReview review = orderReviewService.getReviewByOrderId(o.getId());
             if (review != null) {
                 item.put("score", review.getScore());
                 item.put("content", review.getContent());
+                item.put("createTime", review.getCreateTime());
             }
 
             result.add(item);
@@ -342,3 +353,4 @@ public class UserController {
         return R.success(result);
     }
 }
+

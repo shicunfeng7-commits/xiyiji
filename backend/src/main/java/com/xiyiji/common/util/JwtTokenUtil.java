@@ -1,31 +1,35 @@
 package com.xiyiji.common.util;
 
+import com.xiyiji.common.config.JwtProperties;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jws;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.Resource;
+import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
+@Component
 public class JwtTokenUtil {
 
-    private static final String SECRET_KEY = "WashProSecretKey2024!@#$%^&*()_+QWERTYUIOP";
-    private static final long EXPIRATION = 604800000L; // 7天
+    @Resource
+    private JwtProperties jwtProperties;
 
-    private static SecretKey getKey() {
-        return Keys.hmacShaKeyFor(SECRET_KEY.getBytes(StandardCharsets.UTF_8));
+    private SecretKey getKey() {
+        return Keys.hmacShaKeyFor(jwtProperties.getSecret().getBytes(StandardCharsets.UTF_8));
     }
 
-    public static String generateToken(Long userId, String phone) {
+    public String generateToken(Long userId, String phone) {
         return generateToken(userId, phone, "user");
     }
 
-    public static String generateToken(Long userId, String phone, String role) {
+    public String generateToken(Long userId, String phone, String role) {
         Date now = new Date();
-        Date expirationDate = new Date(now.getTime() + EXPIRATION);
+        Date expirationDate = new Date(now.getTime() + jwtProperties.getExpiration());
 
         return Jwts.builder()
                 .claim("userId", userId)
@@ -37,7 +41,7 @@ public class JwtTokenUtil {
                 .compact();
     }
 
-    public static Long parseUserId(String token) {
+    public Long parseUserId(String token) {
         Claims claims = parseClaims(token);
         if (claims != null) {
             Number userId = claims.get("userId", Number.class);
@@ -46,7 +50,7 @@ public class JwtTokenUtil {
         return null;
     }
 
-    public static String parsePhone(String token) {
+    public String parsePhone(String token) {
         Claims claims = parseClaims(token);
         if (claims != null) {
             return claims.get("phone", String.class);
@@ -54,7 +58,7 @@ public class JwtTokenUtil {
         return null;
     }
 
-    public static String parseRole(String token) {
+    public String parseRole(String token) {
         Claims claims = parseClaims(token);
         if (claims != null) {
             return claims.get("role", String.class);
@@ -62,7 +66,7 @@ public class JwtTokenUtil {
         return null;
     }
 
-    public static boolean validateToken(String token) {
+    public boolean validateToken(String token) {
         try {
             parseClaims(token);
             return true;
@@ -71,7 +75,7 @@ public class JwtTokenUtil {
         }
     }
 
-    private static Claims parseClaims(String token) {
+    private Claims parseClaims(String token) {
         Jws<Claims> jws = Jwts.parser()
                 .verifyWith(getKey())
                 .build()

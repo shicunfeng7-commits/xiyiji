@@ -11,6 +11,7 @@ import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.StringHttpMessageConverter;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
+import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import java.io.IOException;
@@ -23,20 +24,23 @@ public class WebConfig implements WebMvcConfigurer {
     @Resource
     private LoginInterceptor loginInterceptor;
 
+    @Resource
+    private UploadProperties uploadProperties;
+
     @Override
     public void configureMessageConverters(List<HttpMessageConverter<?>> converters) {
         StringHttpMessageConverter stringConverter = new StringHttpMessageConverter(StandardCharsets.UTF_8);
         converters.add(0, stringConverter);
-        
+
         MappingJackson2HttpMessageConverter jsonConverter = new MappingJackson2HttpMessageConverter();
         jsonConverter.setDefaultCharset(StandardCharsets.UTF_8);
         converters.add(jsonConverter);
     }
 
     @Override
-    public void addResourceHandlers(org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry registry) {
+    public void addResourceHandlers(ResourceHandlerRegistry registry) {
         registry.addResourceHandler("/uploads/**")
-                .addResourceLocations("file:uploads/");
+                .addResourceLocations("file:" + uploadProperties.getDir() + "/");
     }
 
     @Override
@@ -44,7 +48,7 @@ public class WebConfig implements WebMvcConfigurer {
         registry.addInterceptor(loginInterceptor)
                 .addPathPatterns("/api/**")
                 .excludePathPatterns(
-                        "/api/user/login",
+                        "/api/user/phone-login",
                         "/api/user/time-slots",
                         "/api/user/reviews/featured",
                         "/api/user/photos/featured",
