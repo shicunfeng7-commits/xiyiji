@@ -1,4 +1,4 @@
-﻿package com.xiyiji.modules.admin.controller;
+package com.xiyiji.modules.admin.controller;
 
 import java.math.BigDecimal;
 import java.text.SimpleDateFormat;
@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.xiyiji.common.constant.OrderStatus;
 import com.xiyiji.common.dto.AdminLoginDTO;
 import com.xiyiji.common.result.R;
@@ -108,9 +109,12 @@ public class AdminController {
             @RequestParam(required = false) Integer featured,
             @RequestParam(required = false, defaultValue = "createTime") String sort,
             @RequestParam(required = false, defaultValue = "desc") String order,
-            @RequestParam(required = false) String keyword) {
-        List<Order> orders = orderService.getAllOrders(status, featured, sort, order, keyword);
-        List<Map<String, Object>> result = new ArrayList<>();
+            @RequestParam(required = false) String keyword,
+            @RequestParam(defaultValue = "1") long page,
+            @RequestParam(defaultValue = "10") long size)  {
+       IPage<Order> pageResult = orderService.getAllOrders(status, featured, sort, order, keyword,page,size);
+        List<Order> orders = pageResult.getRecords();
+       List<Map<String, Object>> result = new ArrayList<>();
         for (Order o : orders) {
             Map<String, Object> map = new HashMap<>();
             map.put("id", o.getId());
